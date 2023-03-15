@@ -25,7 +25,8 @@ while running:
     if len(actions):
         action = actions.pop(0)
         print(f"{turn} Action =", *action)
-        print(chess.step(action))
-        print("-" * 75)
-    sleep(0.5)
+        print(chess.step(action)[-1])
+        print("-" * 70)
+        sleep(0.5)
+   
 pygame.quit()
