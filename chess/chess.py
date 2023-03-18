@@ -110,7 +110,7 @@ class Chess(gym.Env):
 
             if self.is_empty((row, col), color):
                 continue
-            
+
             yy = abs((color * 7) - y)
             text = self.font.render(
                 Pieces.get_ascii(color, self.board[color, row, col]),
@@ -156,12 +156,13 @@ class Chess(gym.Env):
         if self.board[self.turn, row, col] == Pieces.PAWN and row == 7:
             self.board[self.turn, row, col] = Pieces.QUEEN
 
-    def is_wrong_move(self, current_cell: Cell, next_cell: Cell) -> bool:
+    def is_wrong_move(self, current_cell: Cell, next_cell: Cell, color: int = None) -> bool:
+        color = self.turn if (color is None) else color
         row, col = current_cell
-        cond_1 = self.is_empty(next_cell, self.turn)
+        cond_1 = self.is_empty(next_cell, color)
         cond_2 = not self.check_for_enemy_king(next_cell)
         cond_3 = Pieces.validate_move(
-            self.board[self.turn, row, col],
+            self.board[color, row, col],
             current_cell,
             next_cell,
             self.check_for_enemy(next_cell)
@@ -171,6 +172,45 @@ class Chess(gym.Env):
     def is_empty(self, cell: Cell, color: int):
         row, col = cell
         return self.board[color, row, col] == Pieces.EMPTY
+
+    def get_enemy_king_pos(self) -> Cell:
+        where = np.where(self.board[1 - self.turn] == Pieces.KING)
+        row, col = np.concatenate(where)
+        return row, col
+
+    def is_check_piece(self, enemy_king_pos: Cell, self_pos: Cell) -> bool:
+        rp, cp = self_pos
+        rk, ck = enemy_king_pos
+        return Pieces.validate_move(
+            self.board[self.turn, rp, cp],
+            self_pos,
+            (7 - rk, ck),
+            True
+        )
+
+    def is_check(self, self_king_pos: Cell) -> bool:
+        for re in range(8):
+            for ce in range(8):
+                if self.is_check_piece(self_king_pos, (re, ce)):
+                    return True
+        return False
+
+    def get_king_next_possible_pos(self) -> list:
+        rk, ck = self.get_enemy_king_pos()
+        nxt_ps = []
+        for i in range(-1, 2):
+            for j in range(-1, 2):
+                rn = rk + i
+                cn = ck + j
+                if rn < 8 and rn > -1 and cn < 8 and cn > -1:
+                    nxt_ps.append((rn, cn))
+        return nxt_ps
+
+    def is_check_mate(self):
+        for next_king_pos in self.get_king_next_possible_pos():
+            if not self.is_check(next_king_pos):
+                return False
+        return True
 
     def validate_and_move(self, current_cell: Cell, next_cell: Cell) -> tuple[float, dict]:
 
@@ -183,6 +223,7 @@ class Chess(gym.Env):
         self.empty_enemy_cell(next_cell)
         self.move_piece(current_cell, next_cell)
         self.promote_pawn(next_cell)
+
         self.steps += 1
         self.turn = 1 - self.turn
 
@@ -191,4 +232,5 @@ class Chess(gym.Env):
     def step(self, action: Action) -> Trajectory:
         current_cell, next_cell = action
         reward, info = self.validate_and_move(current_cell, next_cell)
+
         return self.board, reward, self.steps >= self.max_steps, info

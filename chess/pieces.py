@@ -77,14 +77,19 @@ class Pieces:
         cond_2 = diff_row == 0 and diff_col == 1
         cond_3 = diff_row == 1 and diff_col == 1
         return (cond_1 or cond_2 or cond_3)
+    
+    @staticmethod
+    def validate_move_empty(*args):
+        return False
 
     @staticmethod
     def validate_move(piece: int, current_cell: Cell, next_cell: Cell, enemy: bool) -> bool:
         return (
+            Pieces.validate_move_empty,
             Pieces.validate_move_pawn,
             Pieces.validate_move_bishop,
             Pieces.validate_move_knight,
             Pieces.validate_move_rook,
             Pieces.validate_move_queen,
             Pieces.validate_move_king,
-        )[piece - 1](current_cell, next_cell, enemy)
+        )[piece](current_cell, next_cell, enemy)
