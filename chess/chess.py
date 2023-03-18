@@ -181,22 +181,88 @@ class Chess(gym.Env):
         row, col = np.concatenate(where)
         return row, col
 
-    def is_check_piece(self, enemy_king_pos: Cell, self_pos: Cell) -> bool:
-        rp, cp = self_pos
+    def is_check_piece(self, enemy_king_pos: Cell, piece_pos: Cell) -> bool:
+        rp, cp = piece_pos
         rk, ck = enemy_king_pos
         return Pieces.validate_move(
             self.board[self.turn, rp, cp],
-            self_pos,
+            piece_pos,
             (7 - rk, ck),
             True
         )
+
+    def is_path_empty(self, enemy_king_pos: Cell, piece_pos: Cell) -> bool:
+        rp, cp = piece_pos
+        piece = self.board[self.turn, rp, cp]
+
+        if piece == Pieces.ROOK:
+            return self.is_path_empty_rook(enemy_king_pos, piece_pos)
+
+        if piece == Pieces.BISHOP:
+            return self.is_path_empty_bishop(enemy_king_pos, piece_pos)
+
+        if piece == Pieces.QUEEN:
+            return self.is_path_empty_queen(enemy_king_pos, piece_pos)
+
+        # PAWN OR KNIGHT
+        return True
+
+    def is_both_side_empty(self, pos: Cell, turn: int) -> bool:
+        r, c = pos
+        c1 = self.is_empty((r, c), turn)
+        c2 = self.is_empty((7 - r, c), 1 - turn)
+        return (c1 and c2)
+
+    def is_path_empty_queen(self, enemy_king_pos: Cell, piece_pos: Cell) -> bool:
+        rp, cp = piece_pos
+        rk, ck = enemy_king_pos
+        if 7 - rk == rp or ck == cp:
+            return self.is_path_empty_rook(enemy_king_pos, piece_pos)
+        return self.is_path_empty_bishop(enemy_king_pos, piece_pos)
+    
+    def is_path_empty_rook(self, enemy_king_pos: Cell, piece_pos: Cell) -> bool:
+        rp, cp = piece_pos
+        rk, ck = enemy_king_pos
+        rk = 7 - rk
+
+        if rk == rp:
+            d = cp - ck
+            s = np.sign(d)
+            for i in range(1, abs(d)):
+                nc = cp + i * s
+                if not self.is_both_side_empty((rk, nc), self.turn):
+                    return False
+
+        elif ck == cp:
+            d = rp - rk
+            s = np.sign(d)
+            for i in range(1, abs(d)):
+                nr = cp + i * s
+                if not self.is_both_side_empty((nr, ck), self.turn):
+                    return False
+
+        return True
+
+    def is_path_empty_bishop(self, enemy_king_pos: Cell, piece_pos: Cell) -> bool:
+        rp, cp = piece_pos
+        rk, ck = enemy_king_pos
+        rk = 7 - rk
+        dr = rp - rk
+        dc = cp - ck
+        for i in range(1, abs(dr)):
+            nr = rp + i * np.sign(dr)
+            nc = cp + i * np.sign(dc)
+            if not self.is_both_side_empty((nr, nc), self.turn):
+                return False
+        return True
 
     def is_check(self, king_pos: Cell = None) -> bool:
         king_pos = self.get_enemy_king_pos() if (king_pos is None) else king_pos
         for re in range(8):
             for ce in range(8):
                 if self.is_check_piece(king_pos, (re, ce)):
-                    return True
+                    if self.is_path_empty(king_pos, (re, ce)):
+                        return True
         return False
 
     def get_king_next_possible_pos(self) -> list:
@@ -206,11 +272,15 @@ class Chess(gym.Env):
             for j in range(-1, 2):
                 rn = rk + i
                 cn = ck + j
-                if rn < 8 and rn > -1 and cn < 8 and cn > -1:
-                    nxt_ps.append((rn, cn))
+                if ((-1 < rn < 8) and (-1 < cn < 8)):
+                    if self.is_empty((rn, cn), 1 - self.turn):
+                        nxt_ps.append((rn, cn))
         return nxt_ps
 
     def is_check_mate(self):
+        if not self.is_check():
+            return False
+        
         for next_king_pos in self.get_king_next_possible_pos():
             if not self.is_check(next_king_pos):
                 return False
@@ -248,7 +318,7 @@ class Chess(gym.Env):
             rewards[self.turn] = Rewards.CHECK_MATE_LOSE
 
             infos[1 - self.turn]["check_mate_lose"] = True
-            rewards[self.turn] = Rewards.CHECK_MATE_LOSE
+            rewards[1 - self.turn] = Rewards.CHECK_MATE_LOSE
 
             self.done = True
 
@@ -257,7 +327,7 @@ class Chess(gym.Env):
             rewards[self.turn] = Rewards.CHECK_WIN
 
             infos[1 - self.turn]["check_lose"] = True
-            rewards[self.turn] = Rewards.CHECK_LOSE
+            rewards[1 - self.turn] = Rewards.CHECK_LOSE
 
         self.steps += 1
         self.turn = 1 - self.turn

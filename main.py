@@ -26,9 +26,11 @@ while running:
     if len(actions):
         turn = "White" if chess.turn == Pieces.WHITE else "Black"
         action = actions.pop(0)
-        print(f"{turn} Action =", *action)
-        print(chess.step(action)[-1])
+        print(turn)
+        print(f"Action =", *action)
+        print(*chess.step(action)[1:], sep="\n")
         print("-" * 70)
-        sleep(0.5)
+    else:
+        running = False
    
 pygame.quit()
