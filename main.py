@@ -20,9 +20,11 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+    
     chess.render()
-    turn = "White" if chess.turn == Pieces.WHITE else "Black"
+    
     if len(actions):
+        turn = "White" if chess.turn == Pieces.WHITE else "Black"
         action = actions.pop(0)
         print(f"{turn} Action =", *action)
         print(chess.step(action)[-1])
