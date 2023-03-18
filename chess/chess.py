@@ -191,8 +191,8 @@ class Chess(gym.Env):
             True
         )
 
-    def is_check(self) -> bool:
-        king_pos = self.get_enemy_king_pos()
+    def is_check(self, king_pos: Cell = None) -> bool:
+        king_pos = self.get_enemy_king_pos() if (king_pos is None) else king_pos
         for re in range(8):
             for ce in range(8):
                 if self.is_check_piece(king_pos, (re, ce)):
@@ -225,7 +225,7 @@ class Chess(gym.Env):
             infos[self.turn]["wrong_move"] = True
             rewards[self.turn] = Rewards.WRONG_MOVE
             return rewards, infos
-        
+
         if self.is_empty(current_cell, self.turn):
             infos[self.turn]["empty_select"] = True
             rewards[self.turn] = Rewards.EMPTY_SELECT
@@ -237,26 +237,28 @@ class Chess(gym.Env):
             return rewards, infos
 
         rewards = [Rewards.MOVE, Rewards.MOVE]
+        self.checked = [False, False]
+
         self.empty_enemy_cell(next_cell)
         self.move_piece(current_cell, next_cell)
         self.promote_pawn(next_cell)
-        
+
         if self.is_check_mate():
             infos[self.turn]["check_mate_win"] = True
             rewards[self.turn] = Rewards.CHECK_MATE_LOSE
-            
+
             infos[1 - self.turn]["check_mate_lose"] = True
             rewards[self.turn] = Rewards.CHECK_MATE_LOSE
-            
+
             self.done = True
-            
+
         elif self.is_check():
             infos[self.turn]["check_win"] = True
             rewards[self.turn] = Rewards.CHECK_WIN
-            
+
             infos[1 - self.turn]["check_lose"] = True
             rewards[self.turn] = Rewards.CHECK_LOSE
-        
+
         self.steps += 1
         self.turn = 1 - self.turn
 
