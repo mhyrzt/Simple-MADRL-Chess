@@ -1,7 +1,8 @@
 class Rewards:
-    MOVE = -1
-    CHECK_WIN = +10
-    CHECK_LOSE = -10
+    MOVE = -10
+    
+    CHECK_WIN = +50
+    CHECK_LOSE = -50
     
     CHECK_MATE_WIN = +100
     CHECK_MATE_LOSE = -100

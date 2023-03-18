@@ -23,8 +23,9 @@ class Chess(gym.Env):
         window_size: int = 800,
     ) -> None:
         self.turn: int = Pieces.WHITE
+        self.done: bool = False
+        self.checked: bool = [False, False]
         self.board: np.ndarray = self.init_board()
-
         self.steps: int = 0
         self.max_steps: int = max_steps
 
@@ -130,7 +131,9 @@ class Chess(gym.Env):
 
     def reset(self) -> np.ndarray:
         self.turn = Pieces.WHITE
+        self.steps = 0
         self.board = self.init_board()
+        self.checked = [False, False]
         return self.board
 
     def check_for_enemy(self, cell: Cell) -> bool:
@@ -188,10 +191,11 @@ class Chess(gym.Env):
             True
         )
 
-    def is_check(self, self_king_pos: Cell) -> bool:
+    def is_check(self) -> bool:
+        king_pos = self.get_enemy_king_pos()
         for re in range(8):
             for ce in range(8):
-                if self.is_check_piece(self_king_pos, (re, ce)):
+                if self.is_check_piece(king_pos, (re, ce)):
                     return True
         return False
 
@@ -213,24 +217,53 @@ class Chess(gym.Env):
         return True
 
     def validate_and_move(self, current_cell: Cell, next_cell: Cell) -> tuple[float, dict]:
+        infos = [{}, {}]
+        rewards = [0, 0]
+        row, col = current_cell
 
+        if self.checked[self.turn] and self.board[self.turn, row, col] != Pieces.KING:
+            infos[self.turn]["wrong_move"] = True
+            rewards[self.turn] = Rewards.WRONG_MOVE
+            return rewards, infos
+        
         if self.is_empty(current_cell, self.turn):
-            return Rewards.EMPTY_SELECT, {"empty_select": True}
+            infos[self.turn]["empty_select"] = True
+            rewards[self.turn] = Rewards.EMPTY_SELECT
+            return rewards, infos
 
         if self.is_wrong_move(current_cell, next_cell):
-            return Rewards.WRONG_MOVE, {"wrong_move": True}
+            infos[self.turn]["wrong_move"] = True
+            rewards[self.turn] = Rewards.WRONG_MOVE
+            return rewards, infos
 
+        rewards = [Rewards.MOVE, Rewards.MOVE]
         self.empty_enemy_cell(next_cell)
         self.move_piece(current_cell, next_cell)
         self.promote_pawn(next_cell)
-
+        
+        if self.is_check_mate():
+            infos[self.turn]["check_mate_win"] = True
+            rewards[self.turn] = Rewards.CHECK_MATE_LOSE
+            
+            infos[1 - self.turn]["check_mate_lose"] = True
+            rewards[self.turn] = Rewards.CHECK_MATE_LOSE
+            
+            self.done = True
+            
+        elif self.is_check():
+            infos[self.turn]["check_win"] = True
+            rewards[self.turn] = Rewards.CHECK_WIN
+            
+            infos[1 - self.turn]["check_lose"] = True
+            rewards[self.turn] = Rewards.CHECK_LOSE
+        
         self.steps += 1
         self.turn = 1 - self.turn
 
-        return Rewards.MOVE, {}
+        return rewards, infos
 
     def step(self, action: Action) -> Trajectory:
         current_cell, next_cell = action
-        reward, info = self.validate_and_move(current_cell, next_cell)
-
-        return self.board, reward, self.steps >= self.max_steps, info
+        rewards, infos = self.validate_and_move(current_cell, next_cell)
+        done = (self.steps >= self.max_steps) or (self.done)
+        return self.board, rewards, done, infos
