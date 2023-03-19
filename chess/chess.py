@@ -18,7 +18,7 @@ class Chess(gym.Env):
 
     def __init__(
         self,
-        max_steps: int = 500,
+        max_steps: int = 150,
         render_mode: str = "human",
         window_size: int = 800,
     ) -> None:
