@@ -1,15 +1,6 @@
+import numpy as np
 import torch as T
 import torch.nn as nn
-
-
-def get_batch_norm(
-    num_features: int, affine: bool = False, track_running_stats: bool = False
-):
-    return nn.BatchNorm1d(
-        num_features,
-        affine=affine,
-        track_running_stats=track_running_stats,
-    )
 
 
 def build_model(
@@ -19,7 +10,7 @@ def build_model(
         nn.Flatten(),
         nn.Linear(input_size, hidden_layers[0]),
         nn.ReLU(),
-        get_batch_norm(hidden_layers[0]),
+        nn.BatchNorm1d(hidden_layers[0]),
     ]
 
     for i in range(len(hidden_layers) - 1):
@@ -28,9 +19,17 @@ def build_model(
         layers += [
             nn.Linear(in_features, out_features),
             nn.ReLU(),
-            get_batch_norm(out_features),
+            nn.BatchNorm1d(out_features),
         ]
 
     layers += [nn.Linear(hidden_layers[-1], output_size), nn.Softmax(dim=1)]
 
     return nn.Sequential(*layers)
+
+
+def make_batch_ids(n :int, batch_size: int, shuffle: bool = True) -> np.ndarray:
+    starts = np.arange(0, n, batch_size)
+    indices = np.arange(n, dtype=np.int64)
+    if shuffle:
+        np.random.shuffle(indices)
+    return [indices[i: i + batch_size] for i in starts]
