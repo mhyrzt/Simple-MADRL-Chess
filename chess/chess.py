@@ -9,7 +9,7 @@ from chess.types import Cell, Action, Trajectory
 from chess.pieces import Pieces
 from chess.colors import Colors
 from chess.rewards import Rewards
-
+from chess.info_keys import InfoKeys
 
 class Chess(gym.Env):
     metadata: dict = {
@@ -284,17 +284,17 @@ class Chess(gym.Env):
         row, col = current_cell
 
         if self.checked[self.turn] and self.board[self.turn, row, col] != Pieces.KING:
-            infos[self.turn]["wrong_move"] = True
+            infos[self.turn][InfoKeys.WRONG_MOVE] = True
             rewards[self.turn] = Rewards.WRONG_MOVE
             return rewards, infos
 
         if self.is_empty(current_cell, self.turn):
-            infos[self.turn]["empty_select"] = True
+            infos[self.turn][InfoKeys.EMPTY_SELECT] = True
             rewards[self.turn] = Rewards.EMPTY_SELECT
             return rewards, infos
 
         if self.is_wrong_move(current_cell, next_cell):
-            infos[self.turn]["wrong_move"] = True
+            infos[self.turn][InfoKeys.WRONG_MOVE] = True
             rewards[self.turn] = Rewards.WRONG_MOVE
             return rewards, infos
 
@@ -306,21 +306,23 @@ class Chess(gym.Env):
         self.promote_pawn(next_cell)
 
         if self.is_check_mate():
-            infos[self.turn]["check_mate_win"] = True
+            infos[self.turn][InfoKeys.CHECK_MATE_WIN] = True
             rewards[self.turn] = Rewards.CHECK_MATE_LOSE
 
-            infos[1 - self.turn]["check_mate_lose"] = True
+            infos[1 - self.turn][InfoKeys.CHECK_MATE_LOSE] = True
             rewards[1 - self.turn] = Rewards.CHECK_MATE_LOSE
 
             self.done = True
         
         elif self.is_check():
-            infos[self.turn]["check_win"] = True
+            infos[self.turn][InfoKeys.CHECK_WIN] = True
             rewards[self.turn] = Rewards.CHECK_WIN
 
-            infos[1 - self.turn]["check_lose"] = True
+            infos[1 - self.turn][InfoKeys.CHECK_LOSE] = True
             rewards[1 - self.turn] = Rewards.CHECK_LOSE
 
+            self.checked[self.turn] = False
+            self.checked[1 - self.turn] = True
 
         self.steps += 1
         self.turn = 1 - self.turn
