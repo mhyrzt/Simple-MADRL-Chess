@@ -4,7 +4,6 @@ torch==1.10.0+cu113
 torchaudio==0.10.0+cu113
 torchvision==0.11.1+cu113
 pygame==2.1.0
--e git+ssh://git@github.com/mhyrzt/ballbeam-gym.git@fcc6b2b0b5a96e9ff45c89cd06fd0fcf7acc803f#egg=ballbeam_gym
 gym==0.26.2
 gym-notices==0.0.6
 matplotlib==3.5.1
