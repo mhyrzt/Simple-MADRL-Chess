@@ -311,7 +311,7 @@ class Chess(gym.Env):
         infos = [{}, {}]
         rewards = [0, 0]
 
-        if self.is_not_check_free(current_cell):
+        if self.is_not_check_free(current_cell, next_cell):
             rewards[self.turn] = Rewards.WRONG_MOVE
             infos[self.turn][InfoKeys.WRONG_MOVE] = True
             return rewards, infos

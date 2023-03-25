@@ -20,7 +20,7 @@ class Pieces:
 
     @staticmethod
     def get_ascii(color: int, piece: int):
-        return Pieces.ASCIIS[color][piece - 1]
+        return Pieces.ASCIIS[color][piece - 1][0]
 
     @staticmethod
     def validate_move_pawn(current_cell: Cell, next_cell: Cell, enemy: bool) -> bool:
