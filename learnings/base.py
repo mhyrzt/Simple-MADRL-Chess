@@ -11,7 +11,7 @@ class Learning(nn.Module, ABC):
     ) -> None:
         super().__init__()
         self.environment = environment
-        self.state_dim = ...
+        self.state_dim = environment.observation_space.shape[0]
         self.action_dim = ...
 
         self.gamma = gamma

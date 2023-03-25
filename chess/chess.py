@@ -13,7 +13,7 @@ from chess.info_keys import InfoKeys
 
 class Chess(gym.Env):
     metadata: dict = {
-        "render_mode": ("human", "rgb_arry"),
+        "render_mode": ("human", "rgb_array"),
     }
 
     def __init__(
