@@ -153,36 +153,50 @@ class Chess(gym.Env):
         if self.board[self.turn, row, col] == Pieces.PAWN and row == 7:
             self.board[self.turn, row, col] = Pieces.QUEEN
 
+    def kings_touch(self, next_cell: Cell) -> bool:
+        row, col = next_cell
+        if self.board[self.turn, row, col] != Pieces.KING:
+            return False
+
+        enemy_king_neighbors = self.get_king_next_possible_pos(
+            self.get_enemy_king_pos()
+        )
+        return next_cell in enemy_king_neighbors
+
     def is_wrong_move(
-        self, current_cell: Cell, next_cell: Cell, color: int = None
+        self, current_cell: Cell, next_cell: Cell, turn: int = None
     ) -> bool:
-        color = self.turn if (color is None) else color
+        turn = self.turn if (turn is None) else turn
         row, col = current_cell
-        cond_1 = self.is_empty(next_cell, color)
+        cond_1 = self.is_empty(next_cell, turn)
         cond_2 = not self.check_for_enemy_king(next_cell)
         cond_3 = Pieces.validate_move(
-            self.board[color, row, col],
+            self.board[turn, row, col],
             current_cell,
             next_cell,
             self.check_for_enemy(next_cell),
         )
-        return not (cond_1 and cond_2 and cond_3)
+        cond_4 = not self.kings_touch(next_cell)  
+        return not (cond_1 and cond_2 and cond_3 and cond_4)
 
-    def is_empty(self, cell: Cell, color: int):
+    def is_empty(self, cell: Cell, turn: int):
         row, col = cell
-        return self.board[color, row, col] == Pieces.EMPTY
+        return self.board[turn, row, col] == Pieces.EMPTY
 
-    def get_enemy_king_pos(self) -> Cell:
-        where = np.where(self.board[1 - self.turn] == Pieces.KING)
+    def get_king_pos(self, turn: int) -> Cell:
+        where = np.where(self.board[turn] == Pieces.KING)
         row, col = np.concatenate(where)
         return row, col
 
-    def is_check_piece(self, enemy_king_pos: Cell, piece_pos: Cell) -> bool:
+    def get_enemy_king_pos(self) -> Cell:
+        return self.get_king_pos(1 - self.turn)
+
+    def is_check_piece(self, enemy_king_pos: Cell, piece_pos: Cell, turn: int) -> bool:
         rp, cp = piece_pos
         rk, ck = enemy_king_pos
         return Pieces.validate_move(
-            self.board[self.turn, rp, cp], piece_pos, (7 - rk, ck), True
-        )
+            self.board[turn, rp, cp], piece_pos, (7 - rk, ck), True
+        ) and self.is_path_empty(enemy_king_pos, piece_pos)
 
     def is_path_empty(self, enemy_king_pos: Cell, piece_pos: Cell) -> bool:
         rp, cp = piece_pos
@@ -250,53 +264,63 @@ class Chess(gym.Env):
                 return False
         return True
 
-    def is_check(self, king_pos: Cell = None) -> bool:
+    def is_check(self, king_pos: Cell = None, turn: int = None) -> bool:
+        turn = self.turn if turn is None else turn
         king_pos = self.get_enemy_king_pos() if (king_pos is None) else king_pos
         for re in range(8):
             for ce in range(8):
-                if self.is_check_piece(king_pos, (re, ce)):
-                    if self.is_path_empty(king_pos, (re, ce)):
-                        return True
+                if self.is_check_piece(king_pos, (re, ce), turn):
+                    return True
         return False
 
-    def get_king_next_possible_pos(self) -> list:
-        rk, ck = self.get_enemy_king_pos()
+    def get_king_next_possible_pos(self, king_pos: Cell) -> list:
+        rk, ck = king_pos
         nxt_ps = []
         for i in range(-1, 2):
             for j in range(-1, 2):
                 rn = rk + i
                 cn = ck + j
-                if (-1 < rn < 8) and (-1 < cn < 8):
-                    if self.is_empty((rn, cn), 1 - self.turn):
-                        nxt_ps.append((rn, cn))
+                if (
+                    (-1 < rn < 8)
+                    and (-1 < cn < 8)
+                    and self.is_empty((rn, cn), 1 - self.turn)
+                ):
+                    nxt_ps.append((rn, cn))
         return nxt_ps
 
     def is_check_mate(self):
-        for next_king_pos in self.get_king_next_possible_pos():
+        king_pos = self.get_enemy_king_pos()
+        for next_king_pos in self.get_king_next_possible_pos(king_pos):
             if not self.is_check(next_king_pos):
                 return False
         return True
+
+    def is_not_check_free(self, current_cell: Cell, next_cell: Cell) -> bool:
+        row, col = current_cell
+        cond_1 = self.checked[self.turn]
+        cond_2 = self.board[self.turn, row, col] != Pieces.KING
+        cond_3 = self.is_check(next_cell, 1 - self.turn)
+        return cond_1 and cond_2 and cond_3
 
     def validate_and_move(
         self, current_cell: Cell, next_cell: Cell
     ) -> tuple[float, dict]:
         infos = [{}, {}]
         rewards = [0, 0]
-        row, col = current_cell
 
-        if self.checked[self.turn] and self.board[self.turn, row, col] != Pieces.KING:
-            infos[self.turn][InfoKeys.WRONG_MOVE] = True
+        if self.is_not_check_free(current_cell):
             rewards[self.turn] = Rewards.WRONG_MOVE
+            infos[self.turn][InfoKeys.WRONG_MOVE] = True
             return rewards, infos
 
         if self.is_empty(current_cell, self.turn):
-            infos[self.turn][InfoKeys.EMPTY_SELECT] = True
             rewards[self.turn] = Rewards.EMPTY_SELECT
+            infos[self.turn][InfoKeys.EMPTY_SELECT] = True
             return rewards, infos
 
         if self.is_wrong_move(current_cell, next_cell):
-            infos[self.turn][InfoKeys.WRONG_MOVE] = True
             rewards[self.turn] = Rewards.WRONG_MOVE
+            infos[self.turn][InfoKeys.WRONG_MOVE] = True
             return rewards, infos
 
         rewards = [Rewards.MOVE, Rewards.MOVE]
@@ -307,11 +331,11 @@ class Chess(gym.Env):
         self.promote_pawn(next_cell)
 
         if self.is_check_mate():
-            infos[self.turn][InfoKeys.CHECK_MATE_WIN] = True
             rewards[self.turn] = Rewards.CHECK_MATE_LOSE
+            infos[self.turn][InfoKeys.CHECK_MATE_WIN] = True
 
-            infos[1 - self.turn][InfoKeys.CHECK_MATE_LOSE] = True
             rewards[1 - self.turn] = Rewards.CHECK_MATE_LOSE
+            infos[1 - self.turn][InfoKeys.CHECK_MATE_LOSE] = True
 
             self.done = True
 
