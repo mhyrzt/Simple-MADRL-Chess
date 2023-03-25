@@ -4,4 +4,4 @@ class InfoKeys:
     CHECK_WIN = "check_win"
     CHECK_LOSE = "check_lose"
     CHECK_MATE_WIN = "check_mate_win"
-    CHECK_MATE_LOSE = -100
+    CHECK_MATE_LOSE = "check_mate_lose"

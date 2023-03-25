@@ -11,6 +11,7 @@ from chess.colors import Colors
 from chess.rewards import Rewards
 from chess.info_keys import InfoKeys
 
+
 class Chess(gym.Env):
     metadata: dict = {
         "render_mode": ("human", "rgb_array"),
@@ -313,7 +314,7 @@ class Chess(gym.Env):
             rewards[1 - self.turn] = Rewards.CHECK_MATE_LOSE
 
             self.done = True
-        
+
         elif self.is_check():
             infos[self.turn][InfoKeys.CHECK_WIN] = True
             rewards[self.turn] = Rewards.CHECK_WIN
