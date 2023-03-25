@@ -229,11 +229,8 @@ class Chess(gym.Env):
         elif ck == cp:
             d = rk - rp
             s = np.sign(d)
-            print("distance to king:", abs(d), d)
-            print("current row", rp)
             for i in range(1, abs(d)):
                 nr = rp + i * s
-                print("next_row:", nr)
                 if not self.is_both_side_empty((nr, ck), self.turn):
                     return False
 
@@ -257,7 +254,6 @@ class Chess(gym.Env):
         for re in range(8):
             for ce in range(8):
                 if self.is_check_piece(king_pos, (re, ce)):
-                    print("is_check_fn - king pos", king_pos, "piece-pos", (re, ce))
                     if self.is_path_empty(king_pos, (re, ce)):
                         return True
         return False
@@ -275,9 +271,6 @@ class Chess(gym.Env):
         return nxt_ps
 
     def is_check_mate(self):
-        # if not self.is_check():
-        #     return False
-
         for next_king_pos in self.get_king_next_possible_pos():
             if not self.is_check(next_king_pos):
                 return False
@@ -312,13 +305,6 @@ class Chess(gym.Env):
         self.move_piece(current_cell, next_cell)
         self.promote_pawn(next_cell)
 
-        if self.is_check():
-            infos[self.turn]["check_win"] = True
-            rewards[self.turn] = Rewards.CHECK_WIN
-
-            infos[1 - self.turn]["check_lose"] = True
-            rewards[1 - self.turn] = Rewards.CHECK_LOSE
-
         if self.is_check_mate():
             infos[self.turn]["check_mate_win"] = True
             rewards[self.turn] = Rewards.CHECK_MATE_LOSE
@@ -327,6 +313,14 @@ class Chess(gym.Env):
             rewards[1 - self.turn] = Rewards.CHECK_MATE_LOSE
 
             self.done = True
+        
+        elif self.is_check():
+            infos[self.turn]["check_win"] = True
+            rewards[self.turn] = Rewards.CHECK_WIN
+
+            infos[1 - self.turn]["check_lose"] = True
+            rewards[1 - self.turn] = Rewards.CHECK_LOSE
+
 
         self.steps += 1
         self.turn = 1 - self.turn
