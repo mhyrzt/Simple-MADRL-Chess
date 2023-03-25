@@ -67,8 +67,7 @@ class Chess(gym.Env):
             pygame.display.flip()
         else:
             return np.transpose(
-                np.array(pygame.surfarray.pixels3d(self.screen)),
-                axes=(1, 0, 2)
+                np.array(pygame.surfarray.pixels3d(self.screen)), axes=(1, 0, 2)
             )
 
     def init_pygame(self) -> None:
@@ -86,8 +85,8 @@ class Chess(gym.Env):
 
     def get_cell_color(self, x: int, y: int) -> tuple[int]:
         if (x + y) % 2 == 0:
-            return Colors.BLACK
-        return Colors.GRAY
+            return Colors.GRAY
+        return Colors.BLACK
 
     def get_left_top(self, x: int, y: int, offset: float = 0) -> tuple[int]:
         return self.cell_size * x + offset, self.cell_size * y + offset
@@ -96,13 +95,7 @@ class Chess(gym.Env):
         pygame.draw.rect(
             self.screen,
             self.get_cell_color(x, y),
-            pygame.Rect(
-                (
-                    *self.get_left_top(x, y),
-                    self.cell_size,
-                    self.cell_size
-                )
-            )
+            pygame.Rect((*self.get_left_top(x, y), self.cell_size, self.cell_size)),
         )
 
     def draw_piece(self, x: int, y: int) -> None:
@@ -117,7 +110,7 @@ class Chess(gym.Env):
                 Pieces.get_ascii(color, self.board[color, row, col]),
                 True,
                 Colors.WHITE,
-                self.get_cell_color(x, yy)
+                self.get_cell_color(x, yy),
             )
             rect = text.get_rect()
             rect.center = self.get_left_top(x, yy, offset=self.cell_size // 2)
@@ -159,7 +152,9 @@ class Chess(gym.Env):
         if self.board[self.turn, row, col] == Pieces.PAWN and row == 7:
             self.board[self.turn, row, col] = Pieces.QUEEN
 
-    def is_wrong_move(self, current_cell: Cell, next_cell: Cell, color: int = None) -> bool:
+    def is_wrong_move(
+        self, current_cell: Cell, next_cell: Cell, color: int = None
+    ) -> bool:
         color = self.turn if (color is None) else color
         row, col = current_cell
         cond_1 = self.is_empty(next_cell, color)
@@ -168,9 +163,9 @@ class Chess(gym.Env):
             self.board[color, row, col],
             current_cell,
             next_cell,
-            self.check_for_enemy(next_cell)
+            self.check_for_enemy(next_cell),
         )
-        return (not (cond_1 and cond_2 and cond_3))
+        return not (cond_1 and cond_2 and cond_3)
 
     def is_empty(self, cell: Cell, color: int):
         row, col = cell
@@ -185,10 +180,7 @@ class Chess(gym.Env):
         rp, cp = piece_pos
         rk, ck = enemy_king_pos
         return Pieces.validate_move(
-            self.board[self.turn, rp, cp],
-            piece_pos,
-            (7 - rk, ck),
-            True
+            self.board[self.turn, rp, cp], piece_pos, (7 - rk, ck), True
         )
 
     def is_path_empty(self, enemy_king_pos: Cell, piece_pos: Cell) -> bool:
@@ -211,7 +203,8 @@ class Chess(gym.Env):
         r, c = pos
         c1 = self.is_empty((r, c), turn)
         c2 = self.is_empty((7 - r, c), 1 - turn)
-        return (c1 and c2)
+        c3 = self.board[1 - turn, 7 - r, c] == Pieces.KING
+        return c1 and c2 or c3
 
     def is_path_empty_queen(self, enemy_king_pos: Cell, piece_pos: Cell) -> bool:
         rp, cp = piece_pos
@@ -219,14 +212,14 @@ class Chess(gym.Env):
         if 7 - rk == rp or ck == cp:
             return self.is_path_empty_rook(enemy_king_pos, piece_pos)
         return self.is_path_empty_bishop(enemy_king_pos, piece_pos)
-    
+
     def is_path_empty_rook(self, enemy_king_pos: Cell, piece_pos: Cell) -> bool:
         rp, cp = piece_pos
         rk, ck = enemy_king_pos
         rk = 7 - rk
 
         if rk == rp:
-            d = cp - ck
+            d = ck - cp
             s = np.sign(d)
             for i in range(1, abs(d)):
                 nc = cp + i * s
@@ -234,10 +227,13 @@ class Chess(gym.Env):
                     return False
 
         elif ck == cp:
-            d = rp - rk
+            d = rk - rp
             s = np.sign(d)
+            print("distance to king:", abs(d), d)
+            print("current row", rp)
             for i in range(1, abs(d)):
-                nr = cp + i * s
+                nr = rp + i * s
+                print("next_row:", nr)
                 if not self.is_both_side_empty((nr, ck), self.turn):
                     return False
 
@@ -247,8 +243,8 @@ class Chess(gym.Env):
         rp, cp = piece_pos
         rk, ck = enemy_king_pos
         rk = 7 - rk
-        dr = rp - rk
-        dc = cp - ck
+        dr = rk - rp
+        dc = ck - cp
         for i in range(1, abs(dr)):
             nr = rp + i * np.sign(dr)
             nc = cp + i * np.sign(dc)
@@ -261,6 +257,7 @@ class Chess(gym.Env):
         for re in range(8):
             for ce in range(8):
                 if self.is_check_piece(king_pos, (re, ce)):
+                    print("is_check_fn - king pos", king_pos, "piece-pos", (re, ce))
                     if self.is_path_empty(king_pos, (re, ce)):
                         return True
         return False
@@ -272,21 +269,23 @@ class Chess(gym.Env):
             for j in range(-1, 2):
                 rn = rk + i
                 cn = ck + j
-                if ((-1 < rn < 8) and (-1 < cn < 8)):
+                if (-1 < rn < 8) and (-1 < cn < 8):
                     if self.is_empty((rn, cn), 1 - self.turn):
                         nxt_ps.append((rn, cn))
         return nxt_ps
 
     def is_check_mate(self):
-        if not self.is_check():
-            return False
-        
+        # if not self.is_check():
+        #     return False
+
         for next_king_pos in self.get_king_next_possible_pos():
             if not self.is_check(next_king_pos):
                 return False
         return True
 
-    def validate_and_move(self, current_cell: Cell, next_cell: Cell) -> tuple[float, dict]:
+    def validate_and_move(
+        self, current_cell: Cell, next_cell: Cell
+    ) -> tuple[float, dict]:
         infos = [{}, {}]
         rewards = [0, 0]
         row, col = current_cell
@@ -313,6 +312,13 @@ class Chess(gym.Env):
         self.move_piece(current_cell, next_cell)
         self.promote_pawn(next_cell)
 
+        if self.is_check():
+            infos[self.turn]["check_win"] = True
+            rewards[self.turn] = Rewards.CHECK_WIN
+
+            infos[1 - self.turn]["check_lose"] = True
+            rewards[1 - self.turn] = Rewards.CHECK_LOSE
+
         if self.is_check_mate():
             infos[self.turn]["check_mate_win"] = True
             rewards[self.turn] = Rewards.CHECK_MATE_LOSE
@@ -321,13 +327,6 @@ class Chess(gym.Env):
             rewards[1 - self.turn] = Rewards.CHECK_MATE_LOSE
 
             self.done = True
-
-        elif self.is_check():
-            infos[self.turn]["check_win"] = True
-            rewards[self.turn] = Rewards.CHECK_WIN
-
-            infos[1 - self.turn]["check_lose"] = True
-            rewards[1 - self.turn] = Rewards.CHECK_LOSE
 
         self.steps += 1
         self.turn = 1 - self.turn
