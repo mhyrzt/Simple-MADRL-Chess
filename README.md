@@ -30,3 +30,12 @@ Contributions to this project are welcome. If you have any ideas or suggestions,
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ## Citation 📃
+
+....
+
+## TODO
+
+- [ ] Complete Agents
+- [ ] if checked and after move is still check it's not a vlid move
+- [ ] one king can never attack another.
+- [ ] Test Another scenario :)).
