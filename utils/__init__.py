@@ -7,7 +7,6 @@ def build_model(
     input_size: int, hidden_layers: tuple[int], output_size: int
 ) -> nn.Module:
     layers = [
-        nn.Flatten(),
         nn.Linear(input_size, hidden_layers[0]),
         nn.ReLU(),
         nn.BatchNorm1d(hidden_layers[0]),
