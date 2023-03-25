@@ -158,10 +158,13 @@ class Chess(gym.Env):
         if self.board[self.turn, row, col] != Pieces.KING:
             return False
 
-        enemy_king_neighbors = self.get_king_next_possible_pos(
-            self.get_enemy_king_pos()
-        )
-        return next_cell in enemy_king_neighbors
+        r, c = self.get_enemy_king_pos()
+        for i in range(-1, 2):
+            for j in range(-1, 2):
+                if r + i == row and c + j == col:
+                    return True
+        
+        return False
 
     def is_wrong_move(
         self, current_cell: Cell, next_cell: Cell, turn: int = None
