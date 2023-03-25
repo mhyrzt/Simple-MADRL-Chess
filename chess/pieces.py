@@ -29,7 +29,7 @@ class Pieces:
         diff_col = abs(next_col - curr_col)
         cond_1 = (curr_row == 1 and next_row == 3) and (diff_col == 0) and (not enemy)
         cond_2 = (next_row == curr_row + 1) and (diff_col == 0) and (not enemy)
-        cond_3 = (next_row == curr_row + 1 and diff_col == 1) and enemy
+        cond_3 = (next_row == curr_row + 1) and (diff_col == 1) and enemy
         return cond_1 or cond_2 or cond_3
 
     @staticmethod
