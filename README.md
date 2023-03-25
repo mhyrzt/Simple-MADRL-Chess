@@ -25,6 +25,14 @@ python3 -m pip install requirements.txt
 
 Contributions to this project are welcome. If you have any ideas or suggestions, feel free to open an issue or submit a pull request.
 
+### TODO
+<!-- - [ ] Task
+- [x] done -->
+- [ ] Complete Agents
+- [x] if checked and after move is still check it's not a valid move
+- [x] one king can never attack another.
+- [ ] Test Another scenario :)).
+
 ## License 🔑
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
@@ -32,10 +40,3 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ## Citation 📃
 
 COMING SOON...
-
-## TODO
-
-- [ ] Complete Agents
-- [ ] if checked and after move is still check it's not a vlid move
-- [ ] one king can never attack another.
-- [ ] Test Another scenario :)).
