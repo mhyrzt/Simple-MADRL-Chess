@@ -12,3 +12,21 @@ The goal of this project is to build an environment for the game of chess and ap
 The project will explore two different methods for applying the PPO algorithm to the chess environment. The first method will involve training two different agents with separate neural networks. These two agents will compete against each other, with each agent learning from the other's moves. This approach is known as self-play and has been shown to be effective in training game-playing agents.
 
 The second method will involve training a single agent with a single neural network. This agent will learn to play both sides of the chessboard, meaning it will learn to play as both white and black pieces. This approach is known as joint training and has the advantage of being more computationally efficient since it only requires one agent to be trained.
+
+## Installation
+
+```bash
+git clone git@github.com:mhyrzt/Simple-MADRL-Chess.git
+cd Simple-MADRL-Chess
+python3 -m pip install requirements.txt
+```
+
+## Contributing
+
+Contributions to this project are welcome. If you have any ideas or suggestions, feel free to open an issue or submit a pull request.
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Citation
