@@ -8,10 +8,13 @@ from learnings.ppo.actor import Actor
 from learnings.ppo.critic import Critic
 from tqdm.autonotebook import tqdm
 
+
 class PPO(Learning):
     def __init__(
         self,
         environment: gym.Env,
+        state_dim: int,
+        action_dim: int,
         hidden_layers: tuple[int],
         epochs: int,
         buffer_size: int,
@@ -19,10 +22,8 @@ class PPO(Learning):
         gae_lambda: float = 0.95,
         policy_clip: float = 0.2,
         gamma: float = 0.99,
-        learning_rate: float = 1e-3,
     ) -> None:
-        super().__init__(environment, epochs, gamma, learning_rate)
-        self.gamma = gamma
+        super().__init__(environment, state_dim, action_dim, epochs, gamma)
         self.gae_lambda = gae_lambda
         self.policy_clip = policy_clip
         self.buffer = BufferPPO(
@@ -31,7 +32,7 @@ class PPO(Learning):
             batch_size=batch_size,
             gae_lambda=gae_lambda,
         )
-        
+
         self.hidden_layers = hidden_layers
         self.actor = Actor(self.state_dim, self.action_dim, hidden_layers)
         self.critic = Critic(self.state_dim, self.action_dim, hidden_layers)
