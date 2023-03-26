@@ -124,11 +124,12 @@ class Chess(gym.Env):
         pygame.quit()
 
     def reset(self) -> np.ndarray:
+        self.done = False
         self.turn = Pieces.WHITE
         self.steps = 0
         self.board = self.init_board()
         self.checked = [False, False]
-        return self.board
+        return self.board, False
 
     def check_for_enemy(self, cell: Cell) -> bool:
         row, col = cell
