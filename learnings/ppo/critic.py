@@ -1,6 +1,6 @@
-import torch
+import torch as T
 import torch.nn as nn
-import utils
+from utils import build_base_model
 
 
 class Critic(nn.Module):
@@ -8,7 +8,8 @@ class Critic(nn.Module):
         super().__init__()
         self.state_dim = state_dim
         self.hidden_layers = hidden_layers
-        self.model = utils.build_model(state_dim, hidden_layers, 1)
+        self.model = build_base_model(state_dim, hidden_layers)
+        self.value = nn.Linear(hidden_layers[-1], 1)
 
-    def forward(self, state: torch.Tensor):
-        return self.model(state)
+    def forward(self, state: T.Tensor):
+        return self.value(self.model(state))
