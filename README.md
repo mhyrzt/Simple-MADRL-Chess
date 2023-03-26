@@ -26,8 +26,8 @@ python3 -m pip install requirements.txt
 Contributions to this project are welcome. If you have any ideas or suggestions, feel free to open an issue or submit a pull request.
 
 ### TODO
-<!-- - [ ] Task
-- [x] done -->
+
+- [ ] Debug and fix actor and ppo agent.
 - [ ] Complete Agents
 - [x] if checked and after move is still check it's not a valid move
 - [x] one king can never attack another.
