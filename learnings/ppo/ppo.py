@@ -2,11 +2,14 @@ import gym
 import numpy as np
 import torch as T
 import torch.optim as optim
+from tqdm.autonotebook import tqdm
+
 from buffer.ppo import BufferPPO
+from buffer.episode import Episode
+
 from learnings.base import Learning
 from learnings.ppo.actor import Actor
 from learnings.ppo.critic import Critic
-from tqdm.autonotebook import tqdm
 
 
 class PPO(Learning):
@@ -34,7 +37,7 @@ class PPO(Learning):
         )
 
         self.hidden_layers = hidden_layers
-        self.actor = Actor(self.state_dim, self.action_dim, hidden_layers)
+        self.actor = Actor(self.state_dim, self.action_dim, hidden_layers, self.device)
         self.critic = Critic(self.state_dim, self.action_dim, hidden_layers)
         self.actor_optimizer = optim.Adam(self.actor.parameters())
         self.critic_optimizer = optim.Adam(self.critic.parameters())
@@ -43,14 +46,9 @@ class PPO(Learning):
 
     def take_action(self, state: np.ndarray):
         state = T.Tensor([state]).to(self.device)
-        dist = self.actor(state)
-        value = self.critic(state)
-        action = dist.sample()
-
-        probs = T.squeeze(dist.log_prob(action)).item()
-        action = T.squeeze(action).item()
-        value = T.squeeze(value).item()
-        return action, probs, value
+        value = T.squeeze(self.critic(state)).item()
+        prob, action, _ = self.actor(state)
+        return action[0], prob[0], value
 
     def epoch(self):
         (
@@ -67,15 +65,13 @@ class PPO(Learning):
         for batch in batches:
             values = T.Tensor(values_arr[batch]).to(self.device)
             states = T.Tensor(states_arr[batch]).to(self.device)
-            actions = T.Tensor(actions_arr[batch]).to(self.device)
             old_probs = T.Tensor(old_probs_arr[batch]).to(self.device)
             advantages = T.Tensor(advantages_arr[batch]).to(self.device)
 
-            dist = self.actor(states)
-            critic_value = self.critic(states)
-            critic_value = T.squeeze(critic_value)
+            _, _, calc_log_probs = self.actor(states)
+            critic_value = T.squeeze(self.critic(states))
 
-            new_probs = dist.log_prob(actions)
+            new_probs = calc_log_probs(actions_arr[batch])
             prob_ratio = (new_probs - old_probs).exp()
 
             weighted_probs = advantages * prob_ratio
@@ -98,3 +94,6 @@ class PPO(Learning):
         for epoch in tqdm(range(self.epochs), desc="PPO Learning..."):
             self.epoch()
         self.buffer.clear()
+
+    def remember(self, episode: Episode):
+        self.buffer.add(episode)
