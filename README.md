@@ -27,11 +27,11 @@ Contributions to this project are welcome. If you have any ideas or suggestions,
 
 ### TODO
 
-- [ ] Debug and fix actor and ppo agent.
 - [ ] Complete Agents
+- [ ] Test Another scenario :)).
+- [x] Debug and fix actor and ppo agent.
 - [x] if checked and after move is still check it's not a valid move
 - [x] one king can never attack another.
-- [ ] Test Another scenario :)).
 
 ## License 🔑
 
