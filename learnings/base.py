@@ -27,3 +27,11 @@ class Learning(nn.Module, ABC):
     @abstractmethod
     def take_action(self, state: np.ndarray):
         pass
+
+    @abstractmethod
+    def learn(self):
+        pass
+
+    @abstractmethod
+    def remember(self, *args):
+        pass
