@@ -129,7 +129,6 @@ class Chess(gym.Env):
         self.steps = 0
         self.board = self.init_board()
         self.checked = [False, False]
-        return self.board, False
 
     def check_for_enemy(self, cell: Cell) -> bool:
         row, col = cell
@@ -362,4 +361,13 @@ class Chess(gym.Env):
         current_cell, next_cell = action
         rewards, infos = self.validate_and_move(current_cell, next_cell)
         done = (self.steps >= self.max_steps) or (self.done)
-        return self.board, rewards, done, infos
+        return rewards, done, infos
+
+    def get_state(self, turn: int) -> np.ndarray:
+        arr = self.board.copy()
+        if turn == Pieces.WHITE:
+            arr[[0, 1]] = arr[[1, 0]]
+        return arr.flatten()
+
+    def close(self):
+        pygame.quit()

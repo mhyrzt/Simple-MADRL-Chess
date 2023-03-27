@@ -4,7 +4,6 @@ from buffer.episode import Episode
 from collections import deque
 import numpy as np
 
-
 class BufferPPO(Buffer):
     def __init__(
         self,
@@ -43,6 +42,7 @@ class BufferPPO(Buffer):
         batches = utils.make_batch_ids(
             n=len(states), batch_size=self.batch_size, shuffle=self.shuffle
         )
+
         return (
             np.array(states),
             np.array(actions),

@@ -40,10 +40,14 @@ class Episode:
                 advantages[t] += (
                     discount
                     * (
-                        self.reward[k]
-                        + gamma * self.value[k + 1] * (1 - int(self.goal[k]))
+                        self.rewards[k]
+                        + gamma * self.values[k + 1] * (1 - int(self.goals[k]))
                     )
-                    - self.value[k]
+                    - self.values[k]
                 )
                 discount *= gamma * gae_lambda
-        return advantages
+        return list(advantages)
+
+    
+    def __len__(self):
+        return len(self.goals)

@@ -28,7 +28,7 @@ Contributions to this project are welcome. If you have any ideas or suggestions,
 ### TODO ✔️
 
 - [ ] Complete Agents
-- [ ] Test Another scenario :)).
+- [ ] Test Another scenario :))
 
 ## License 🔑
 

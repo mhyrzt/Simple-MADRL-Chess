@@ -7,6 +7,6 @@ class Rewards:
     CHECK_MATE_WIN = +100
     CHECK_MATE_LOSE = -100
     
-    WRONG_MOVE = -200
-    EMPTY_SELECT = -400
+    WRONG_MOVE = -500
+    EMPTY_SELECT = -800
     

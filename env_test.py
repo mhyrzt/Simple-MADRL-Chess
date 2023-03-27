@@ -26,7 +26,7 @@ while running:
         print(turn)
         print(f"Action =", *action)
         print(*chess.step(action)[1:], sep="\n")
-        # sleep(1)
+        sleep(1)
         print("-" * 70)
 
-pygame.quit()
+chess.close()

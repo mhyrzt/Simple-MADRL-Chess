@@ -38,7 +38,7 @@ class PPO(Learning):
 
         self.hidden_layers = hidden_layers
         self.actor = Actor(self.state_dim, self.action_dim, hidden_layers, self.device)
-        self.critic = Critic(self.state_dim, self.action_dim, hidden_layers)
+        self.critic = Critic(self.state_dim, hidden_layers)
         self.actor_optimizer = optim.Adam(self.actor.parameters())
         self.critic_optimizer = optim.Adam(self.critic.parameters())
 
@@ -91,7 +91,7 @@ class PPO(Learning):
             self.critic_optimizer.step()
 
     def learn(self):
-        for epoch in tqdm(range(self.epochs), desc="PPO Learning..."):
+        for epoch in tqdm(range(self.epochs), desc="PPO Learning...", ncols=128):
             self.epoch()
         self.buffer.clear()
 
