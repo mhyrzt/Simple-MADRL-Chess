@@ -7,6 +7,7 @@ import chess.colors as Colors
 import chess.rewards as Rewards
 import chess.info_keys as InfoKeys
 
+from gym import spaces
 from typing import Union
 from pygame.font import Font
 from pygame.surface import Surface
@@ -25,6 +26,9 @@ class Chess(gym.Env):
         render_mode: str = "human",
         window_size: int = 800,
     ) -> None:
+        self.action_space = spaces.Discrete(640)
+        self.observation_space = spaces.Box(0, 7, (128,), dtype=np.int32)
+        
         self.board: np.ndarray = self.init_board()
         self.pieces: list[dict] = self.init_pieces()
         self.pieces_names: list[str] = self.get_pieces_names()
@@ -521,13 +525,16 @@ class Chess(gym.Env):
     def step(self, action: int):
         assert not self.done, "Game Finished, call reset method for another game"
         assert action < 640, "action number must be less than 640"
+
         source_pos, possibles, actions_mask = self.get_all_actions(self.turn)
         assert actions_mask[action], f"Cannot Take This Action = {action}"
+
         rewards, infos = self.move_piece(
             source_pos[action], possibles[action], self.turn
         )
         rewards, infos = self.update_checks(rewards, infos)
         rewards, infos = self.update_check_mates(rewards, infos)
+
         self.turn = 1 - self.turn
         self.steps += 1
         return rewards, self.is_game_done(), infos
