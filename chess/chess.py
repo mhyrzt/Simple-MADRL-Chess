@@ -187,27 +187,18 @@ class Chess(gym.Env):
         sign_row = np.sign(next_row - current_row)
         sign_col = np.sign(next_col - current_col)
 
-        assert diff_col != 0 or diff_row != 0, "is_path_empty: both diff cannot be 0"
-
-        if (
-            (abs(diff_col) + abs(diff_row)) <= 2
-            and abs(diff_col) <= 1
-            and abs(diff_row) <= 1
-        ):  # NEIGHBOR CELL
-            return True
-
         size = max(abs(diff_row), abs(diff_col)) - 1
-        rows = np.zeros(size, dtype=np.int32)
-        cols = np.zeros(size, dtype=np.int32)
+        rows = np.zeros(size, dtype=np.int32) + next_row
+        cols = np.zeros(size, dtype=np.int32) + next_col
 
         if diff_row:
             rows = np.arange(current_row + sign_row, next_row, sign_row, dtype=np.int32)
 
         if diff_col:
             cols = np.arange(current_col + sign_col, next_col, sign_col, dtype=np.int32)
-
+        
         for pos in zip(rows, cols):
-            if not self.both_side_empty(pos, turn):
+            if not self.both_side_empty(tuple(pos), turn):
                 return False
 
         return True
@@ -278,13 +269,10 @@ class Chess(gym.Env):
 
         return possibles, actions_mask
 
-    def get_actions_for_pawn(
-        self, pos: Cell, turn: int, deny_enemy_king: bool = False
-    ):
+    def get_actions_for_pawn(self, pos: Cell, turn: int, deny_enemy_king: bool = False):
         possibles, actions_mask = self.get_empty_actions("pawn")
         if self.checked[turn] or (pos is None):
             return possibles, actions_mask
-
         row, col = pos
         if self.board[turn, row, col] == Pieces.QUEEN:
             return self.get_action_for_queen(pos, turn)
@@ -326,7 +314,6 @@ class Chess(gym.Env):
 
         if self.checked[turn] or (pos is None):
             return possibles, actions_mask
-
         row, col = pos
         for i, (r, c) in enumerate(Moves.KNIGHT):
             p = (row + r, col + c)
@@ -338,6 +325,7 @@ class Chess(gym.Env):
 
             if self.is_enemy_king(p, turn) and not deny_enemy_king:
                 continue
+
             possibles[i] = p
             actions_mask[i] = 1
 
@@ -424,7 +412,7 @@ class Chess(gym.Env):
             # DENY ENEMY KING == FOR CHECKMATE VALIDATION ONLY SO ....
             if name == "king" and deny_enemy_king:
                 continue
-            
+
             source_pos, possibles, actions_mask = self.get_actions_for(
                 name, turn, deny_enemy_king
             )
