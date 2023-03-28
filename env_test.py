@@ -1,9 +1,13 @@
 import pygame
 from chess import Chess
-from chess.pieces import Pieces
 from time import sleep
+import numpy as np
+import random
+import sys
 
-chess = Chess(window_size=512)
+sys.setrecursionlimit(100)
+env = Chess(window_size=800)
+env.render()
 # actions = [
 #     ((1, 4), (3, 4)), # WHITE
 #     ((1, 4), (3, 4)), # BLACK
@@ -12,28 +16,30 @@ chess = Chess(window_size=512)
 #     ((4, 7), (4, 4)), # WHITE
 # ]
 
-actions = [
-    ((0, 2), (2, 0)), # BISHOP JUMP
-    ((0, 0), (3, 0)), # ROOK JUMP
-    ((0, 3), (4, 7)), # QUEEN JUMP
-    ((1, 1), (2, 1))
-]
-
 running = True
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+    try:
+        turn = env.turn
+        _, _, mask = env.get_all_actions(turn)
+        action = random.sample(list(np.where(mask == 1)[0]), 1)[0]
+        print("White" if turn else "Black")
+        print(f"Action = {action}")
+        rewards, done, infos = env.step(action)
+        print(f"Rewards = {rewards}")
+        print(f"Infos = {infos}")
+        print("-" * 75)
+        env.render()
+        if done:
+            env.reset()
+            print("RESET")
+            # sleep(0.25)
+    except Exception as e:
+        print(e)
+        running = False
 
-    chess.render()
 
-    if len(actions):
-        turn = "White" if chess.turn == Pieces.WHITE else "Black"
-        action = actions.pop(0)
-        print(turn)
-        print(f"Action =", *action)
-        print(*chess.step(action)[1:], sep="\n")
-        # sleep(1)
-        print("-" * 70)
-
-chess.close()
+input("EXIT")
+env.close()

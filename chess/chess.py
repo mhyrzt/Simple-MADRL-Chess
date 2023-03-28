@@ -159,10 +159,11 @@ class Chess(gym.Env):
         self.turn = Pieces.WHITE
         self.steps = 0
         self.board = self.init_board()
+        self.pieces = self.init_pieces()
         self.checked = [False, False]
 
     def get_pieces_names(self) -> set:
-        return set(self.pieces[0].keys())
+        return list(self.pieces[0].keys())
 
     def is_in_range(self, pos: Cell) -> bool:
         row, col = pos
@@ -188,7 +189,11 @@ class Chess(gym.Env):
 
         assert diff_col != 0 or diff_row != 0, "is_path_empty: both diff cannot be 0"
 
-        if (abs(diff_col) + abs(diff_row)) <= 2:
+        if (
+            (abs(diff_col) + abs(diff_row)) <= 2
+            and abs(diff_col) <= 1
+            and abs(diff_row) <= 1
+        ):  # NEIGHBOR CELL
             return True
 
         size = max(abs(diff_row), abs(diff_col)) - 1
@@ -207,7 +212,9 @@ class Chess(gym.Env):
 
         return True
 
-    def get_actions_for_bishop(self, pos: Cell, turn: int, deny_king: bool = False):
+    def get_actions_for_bishop(
+        self, pos: Cell, turn: int, deny_enemy_king: bool = False
+    ):
         possibles, actions_mask = self.get_empty_actions("bishop")
         if self.checked[turn] or (pos is None):
             return possibles, actions_mask
@@ -215,18 +222,25 @@ class Chess(gym.Env):
         row, col = pos
         for i, (r, c) in enumerate(Moves.BISHOP):
             p = (row + r, col + c)
+
             if not self.is_in_range(p):
                 continue
-            if self.is_enemy_king(p, turn) and not deny_king:
+
+            if not self.is_empty(p, turn):
                 continue
+
+            if self.is_enemy_king(p, turn) and not deny_enemy_king:
+                continue
+
             if not self.is_path_empty(pos, p, turn):
                 continue
+
             possibles[i] = p
             actions_mask[i] = 1
 
         return possibles, actions_mask
 
-    def get_actions_for_rook(self, pos: Cell, turn: int, deny_king: bool = False):
+    def get_actions_for_rook(self, pos: Cell, turn: int, deny_enemy_king: bool = False):
         possibles, actions_mask = self.get_empty_actions("rook")
         if self.checked[turn] or (pos is None):
             return possibles, actions_mask
@@ -234,61 +248,70 @@ class Chess(gym.Env):
         row, col = pos
         for i, (r, c) in enumerate(Moves.ROOK):
             p = (row + r, col + c)
+
             if not self.is_in_range(p):
                 continue
-            if self.is_enemy_king(p, turn) and not deny_king:
+
+            if not self.is_empty(p, turn):
                 continue
+
+            if self.is_enemy_king(p, turn) and not deny_enemy_king:
+                continue
+
             if not self.is_path_empty(pos, p, turn):
                 continue
+
             possibles[i] = p
             actions_mask[i] = 1
 
         return possibles, actions_mask
 
-    def get_action_for_queen(self, pos: Cell, turn: int, deny_king: bool = False):
+    def get_action_for_queen(self, pos: Cell, turn: int, deny_enemy_king: bool = False):
         possibles_rook, actions_mask_rook = self.get_actions_for_rook(
-            pos, turn, deny_king
+            pos, turn, deny_enemy_king
         )
         possibles_bishop, actions_mask_bishop = self.get_actions_for_bishop(
-            pos, turn, deny_king
+            pos, turn, deny_enemy_king
         )
-        possibles = possibles_bishop + possibles_rook
-        actions_mask = actions_mask_bishop, actions_mask_rook
+        possibles = np.concatenate([possibles_bishop, possibles_rook])
+        actions_mask = np.concatenate([actions_mask_bishop, actions_mask_rook])
 
         return possibles, actions_mask
 
     def get_actions_for_pawn(
-        self, pos: Cell, turn: int, value: int, deny_king: bool = False
+        self, pos: Cell, turn: int, deny_enemy_king: bool = False
     ):
-
         possibles, actions_mask = self.get_empty_actions("pawn")
         if self.checked[turn] or (pos is None):
             return possibles, actions_mask
 
-        if value == Pieces.QUEEN:
-            return self.get_action_for_queen(pos, value)
-
         row, col = pos
+        if self.board[turn, row, col] == Pieces.QUEEN:
+            return self.get_action_for_queen(pos, turn)
+
         for i, (r, c) in enumerate(Moves.PAWN[:4]):
             p = (row + r, col + c)
 
             if not self.is_in_range(p):
                 continue
 
-            if self.is_enemy_king(p, turn) and not deny_king:
+            if not self.is_empty(p, turn):
                 continue
 
-            can_moves = {
-                (r == 1 and self.both_side_empty(p, turn)),
+            if self.is_enemy_king(p, turn) and not deny_enemy_king:
+                continue
+
+            can_moves = (
+                (r == 1 and c == 0 and self.both_side_empty(p, turn)),
                 (
                     r == 2
                     and row == 1
                     and self.both_side_empty(p, turn)
                     and self.is_path_empty(pos, p, turn)
                 ),
-                (abs(c) == 1 and self.check_for_enemy(p, turn)),
+                (r == 1 and abs(c) == 1 and self.check_for_enemy(p, turn)),
                 # TODO: EN PASSANT
-            }
+            )
 
             if True in can_moves:
                 possibles[i] = p
@@ -296,7 +319,9 @@ class Chess(gym.Env):
 
         return possibles, actions_mask
 
-    def get_actions_for_knight(self, pos: Cell, turn: int, deny_king: bool = False):
+    def get_actions_for_knight(
+        self, pos: Cell, turn: int, deny_enemy_king: bool = False
+    ):
         possibles, actions_mask = self.get_empty_actions("knight")
 
         if self.checked[turn] or (pos is None):
@@ -307,7 +332,11 @@ class Chess(gym.Env):
             p = (row + r, col + c)
             if not self.is_in_range(p):
                 continue
-            if self.is_enemy_king(p) and not deny_king:
+
+            if not self.is_empty(p, turn):
+                continue
+
+            if self.is_enemy_king(p, turn) and not deny_enemy_king:
                 continue
             possibles[i] = p
             actions_mask[i] = 1
@@ -320,7 +349,11 @@ class Chess(gym.Env):
 
         for i, (r, c) in enumerate(Moves.KING):
             p = (row + r, col + c)
+
             if not self.is_in_range(p):
+                continue
+
+            if not self.is_empty(p, turn):
                 continue
 
             if self.is_neighbor_enemy_king(p, turn):
@@ -330,58 +363,70 @@ class Chess(gym.Env):
                 continue
 
             possibles[i] = p
-            actions_mask[i] = p
+            actions_mask[i] = 1
 
         return possibles, actions_mask
 
     def get_source_pos(self, name: str, turn: int):
+        cat = name.split("_")[0]
         pos = self.pieces[turn][name]
-        size = self.get_size(name)
+        if pos is None:
+            pos = (0, 0)
+        size = self.get_size(cat)
         return np.array([pos] * size)
 
-    def get_actions_for(self, name: str, turn: int, deny_king: bool = False):
+    def get_actions_for(self, name: str, turn: int, deny_enemy_king: bool = False):
         assert name in self.pieces_names, f"name not in {self.pieces_names}"
         piece_cat = name.split("_")[0]
         piece_pos = self.pieces[turn][name]
-        piece_val = self.board[turn, piece_pos[0], piece_pos[1]]
 
         if piece_cat == "pawn":
-            return self.get_source_pos(name, turn), self.get_actions_for_pawn(
-                piece_pos, turn, piece_val, deny_king
+            return (
+                self.get_source_pos(name, turn),
+                *self.get_actions_for_pawn(piece_pos, turn, deny_enemy_king),
             )
 
         if piece_cat == "knight":
-            return self.get_source_pos(name, turn), self.get_actions_for_knight(
-                piece_pos, turn, deny_king
+            return (
+                self.get_source_pos(name, turn),
+                *self.get_actions_for_knight(piece_pos, turn, deny_enemy_king),
             )
 
         if piece_cat == "rook":
-            return self.get_source_pos(name, turn), self.get_actions_for_rook(
-                piece_pos, turn, deny_king
+            return (
+                self.get_source_pos(name, turn),
+                *self.get_actions_for_rook(piece_pos, turn, deny_enemy_king),
             )
 
         if piece_cat == "bishop":
-            return self.get_source_pos(name, turn), self.get_actions_for_bishop(
-                piece_pos, turn, deny_king
+            return (
+                self.get_source_pos(name, turn),
+                *self.get_actions_for_bishop(piece_pos, turn, deny_enemy_king),
             )
 
         if piece_cat == "queen":
-            return self.get_source_pos(name, turn), self.get_action_for_queen(
-                piece_pos, turn, deny_king
+            return (
+                self.get_source_pos(name, turn),
+                *self.get_action_for_queen(piece_pos, turn, deny_enemy_king),
             )
 
         if piece_cat == "king":
-            return self.get_source_pos(name, turn), self.get_actions_for_king(
-                piece_pos, turn
+            return (
+                self.get_source_pos(name, turn),
+                *self.get_actions_for_king(piece_pos, turn),
             )
 
-    def get_all_actions(self, turn: int, deny_king: bool = False):
+    def get_all_actions(self, turn: int, deny_enemy_king: bool = False):
         all_possibles = []
         all_source_pos = []
         all_actions_mask = []
         for name in self.pieces[turn].keys():
+            # DENY ENEMY KING == FOR CHECKMATE VALIDATION ONLY SO ....
+            if name == "king" and deny_enemy_king:
+                continue
+            
             source_pos, possibles, actions_mask = self.get_actions_for(
-                name, turn, deny_king
+                name, turn, deny_enemy_king
             )
             all_source_pos.append(source_pos)
             all_possibles.append(possibles)
@@ -424,7 +469,10 @@ class Chess(gym.Env):
         row, col = king_pos
         row = 7 - row
         _, enemy_possible_moves, _ = self.get_all_actions(1 - turn, True)
-        return (row, col) in enemy_possible_moves
+        for pos in enemy_possible_moves:
+            if tuple(pos) == (row, col):
+                return True
+        return False
 
     def update_checks(self, rewards: list[int] = None, infos: list[set] = None):
         rewards = [0, 0] if rewards is None else rewards
@@ -466,11 +514,16 @@ class Chess(gym.Env):
         self.board[turn, next_row, next_col] = self.board[
             turn, current_row, current_col
         ]
+        self.board[turn, current_row, current_col] = Pieces.EMPTY
         self.board[1 - turn, 7 - next_row, next_col] = Pieces.EMPTY
 
         for (key, value) in self.pieces[turn].items():
-            if value == current_pos:
-                self.pieces[turn][key] = next_pos
+            if value == tuple(current_pos):
+                self.pieces[turn][key] = tuple(next_pos)
+
+        for (key, value) in self.pieces[1 - turn].items():
+            if value == (7 - next_pos[0], next_pos[1]):
+                self.pieces[1 - turn][key] = None
 
         return [Rewards.MOVE, Rewards.MOVE], [set(), set()]
 
@@ -479,13 +532,14 @@ class Chess(gym.Env):
 
     def step(self, action: int):
         assert not self.done, "Game Finished, call reset method for another game"
-        assert action < 584, "action number must be less than 584"
+        assert action < 640, "action number must be less than 640"
         source_pos, possibles, actions_mask = self.get_all_actions(self.turn)
         assert actions_mask[action], f"Cannot Take This Action = {action}"
-        self.steps += 1
         rewards, infos = self.move_piece(
             source_pos[action], possibles[action], self.turn
         )
         rewards, infos = self.update_checks(rewards, infos)
         rewards, infos = self.update_check_mates(rewards, infos)
+        self.turn = 1 - self.turn
+        self.steps += 1
         return rewards, self.is_game_done(), infos
