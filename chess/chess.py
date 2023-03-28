@@ -1,15 +1,17 @@
 import gym
 import pygame
 import numpy as np
+import chess.moves as Moves
+import chess.pieces as Pieces
+import chess.colors as Colors
+import chess.rewards as Rewards
+import chess.info_keys as InfoKeys
+
 from typing import Union
 from pygame.font import Font
 from pygame.surface import Surface
 
 from chess.types import Cell, Action, Trajectory
-from chess.pieces import Pieces
-from chess.colors import Colors
-from chess.rewards import Rewards
-from chess.info_keys import InfoKeys
 
 
 class Chess(gym.Env):
@@ -19,25 +21,25 @@ class Chess(gym.Env):
 
     def __init__(
         self,
-        max_steps: int = 150,
+        max_steps: int = 128,
         render_mode: str = "human",
         window_size: int = 800,
     ) -> None:
+        self.board: np.ndarray = self.init_board()
+        self.pieces: list[dict] = self.init_pieces()
+        self.pieces_names: list[str] = self.get_pieces_names()
+
         self.turn: int = Pieces.WHITE
         self.done: bool = False
-        self.checked: bool = [False, False]
-        self.board: np.ndarray = self.init_board()
         self.steps: int = 0
+        self.checked: bool = [False, False]
         self.max_steps: int = max_steps
 
-        self.cell_size: int = window_size // 8
-        self.window_size: int = window_size
-
         self.font: Font = None
+        self.cell_size: int = window_size // 8
         self.screen: Surface = None
+        self.window_size: int = window_size
         self.render_mode: str = render_mode
-
-        self.init_pygame()
 
     def init_board(self) -> np.ndarray:
         board = np.zeros((2, 8, 8), dtype=np.uint8)
@@ -48,6 +50,34 @@ class Chess(gym.Env):
         board[:, 0, (1, 6)] = Pieces.KNIGHT
         board[:, 0, (2, 5)] = Pieces.BISHOP
         return board
+
+    def init_pieces(self):
+        pieces = {
+            "pawn_1": (1, 0),
+            "pawn_2": (1, 1),
+            "pawn_3": (1, 2),
+            "pawn_4": (1, 3),
+            "pawn_5": (1, 4),
+            "pawn_6": (1, 5),
+            "pawn_7": (1, 6),
+            "pawn_8": (1, 7),
+            "rook_1": (0, 0),
+            "rook_2": (0, 7),
+            "knight_1": (0, 1),
+            "knight_2": (0, 6),
+            "bishop_1": (0, 2),
+            "bishop_2": (0, 5),
+            "king": (0, 4),
+            "queen": (0, 3),
+        }
+
+        return [pieces.copy(), pieces.copy()]
+
+    def get_state(self, turn: int) -> np.ndarray:
+        arr = self.board.copy()
+        if turn == Pieces.WHITE:
+            arr[[0, 1]] = arr[[1, 0]]
+        return arr.flatten()
 
     def draw_cells(self):
         for y in range(8):
@@ -60,6 +90,7 @@ class Chess(gym.Env):
                 self.draw_piece(x, y)
 
     def render(self) -> Union[None, np.ndarray]:
+        self.init_pygame()
         self.screen.fill(Colors.BLACK)
         self.draw_cells()
         self.draw_pieces()
@@ -130,244 +161,274 @@ class Chess(gym.Env):
         self.board = self.init_board()
         self.checked = [False, False]
 
-    def check_for_enemy(self, cell: Cell) -> bool:
-        row, col = cell
-        return not self.is_empty((7 - row, col), 1 - self.turn)
+    def get_pieces_names(self) -> set:
+        return set(self.pieces[0].keys())
 
-    def check_for_enemy_king(self, cell: Cell) -> bool:
-        row, col = cell
-        return self.board[1 - self.turn, 7 - row, col] == Pieces.KING
+    def is_in_range(self, pos: Cell) -> bool:
+        row, col = pos
+        return row >= 0 and row <= 7 and col >= 0 and col <= 7
 
-    def empty_enemy_cell(self, cell: Cell) -> None:
-        row, col = cell
-        self.board[1 - self.turn, 7 - row, col] = Pieces.EMPTY
+    def get_empty_actions(self, name: str):
+        s = Moves.POSSIBLE_MOVES[name]
+        possibles = np.zeros((s, 2), dtype=np.int32)
+        actions_mask = np.zeros((s), dtype=np.int32)
+        return possibles, actions_mask
 
-    def move_piece(self, current_cell: Cell, next_cell: Cell):
-        nr, nc = next_cell
-        cr, cc = current_cell
-        self.board[self.turn, nr, nc] = self.board[self.turn, cr, cc]
-        self.board[self.turn, cr, cc] = Pieces.EMPTY
+    def is_path_empty(self, current_pos: Cell, next_pos: Cell, turn: int) -> bool:
+        next_row, next_col = next_pos
+        current_row, current_col = current_pos
 
-    def promote_pawn(self, cell: Cell):
-        row, col = cell
-        if self.board[self.turn, row, col] == Pieces.PAWN and row == 7:
-            self.board[self.turn, row, col] = Pieces.QUEEN
+        diff_row = next_row - current_row
+        diff_col = next_col - current_col
+        sign_row = np.sign(next_row - current_row)
+        sign_col = np.sign(next_col - current_col)
 
-    def kings_touch(self, next_cell: Cell) -> bool:
-        row, col = next_cell
-        if self.board[self.turn, row, col] != Pieces.KING:
-            return False
+        assert diff_col != 0 or diff_row != 0, "is_path_empty: both diff cannot be 0"
+        size = max(abs(diff_row), abs(diff_col)) - 1
+        rows = np.zeros(size, dtype=np.int32)
+        cols = np.zeros(size, dtype=np.int32)
 
-        r, c = self.get_enemy_king_pos()
-        for i in range(-1, 2):
-            for j in range(-1, 2):
-                if r + i == row and c + j == col:
-                    return True
-        
-        return False
+        if diff_row:
+            rows = np.arange(current_row + sign_row, next_row, sign_row, dtype=np.int32)
 
-    def is_wrong_move(
-        self, current_cell: Cell, next_cell: Cell, turn: int = None
-    ) -> bool:
-        turn = self.turn if (turn is None) else turn
-        row, col = current_cell
-        cond_1 = self.is_empty(next_cell, turn)
-        cond_2 = not self.check_for_enemy_king(next_cell)
-        cond_3 = Pieces.validate_move(
-            self.board[turn, row, col],
-            current_cell,
-            next_cell,
-            self.check_for_enemy(next_cell),
+        if diff_col:
+            cols = np.arange(current_col + sign_col, next_col, sign_col, dtype=np.int32)
+
+        for pos in zip(rows, cols):
+            if not self.both_side_empty(pos, turn):
+                return False
+
+        return True
+
+    def get_actions_for_bishop(self, pos: Cell, turn: int, deny_king: bool = False):
+        possibles, actions_mask = self.get_empty_actions("bishop")
+        if self.checked[turn] or (pos is None):
+            return possibles, actions_mask
+
+        row, col = pos
+        for i, (r, c) in enumerate(Moves.BISHOP):
+            p = (row + r, col + c)
+            if not self.is_in_range(p):
+                continue
+            if self.is_enemy_king(p, turn) and not deny_king:
+                continue
+            if not self.is_path_empty(pos, p, turn):
+                continue
+            possibles[i] = p
+            actions_mask[i] = 1
+
+        return possibles, actions_mask
+
+    def get_actions_for_rook(self, pos: Cell, turn: int, deny_king: bool = False):
+        possibles, actions_mask = self.get_empty_actions("rook")
+        if self.checked[turn] or (pos is None):
+            return possibles, actions_mask
+
+        row, col = pos
+        for i, (r, c) in enumerate(Moves.ROOK):
+            p = (row + r, col + c)
+            if not self.is_in_range(p):
+                continue
+            if self.is_enemy_king(p, turn) and not deny_king:
+                continue
+            if not self.is_path_empty(pos, p, turn):
+                continue
+            possibles[i] = p
+            actions_mask[i] = 1
+
+        return possibles, actions_mask
+
+    def get_action_for_queen(self, pos: Cell, turn: int, deny_king: bool = False):
+        possibles_rook, actions_mask_rook = self.get_actions_for_rook(
+            pos, turn, deny_king
         )
-        cond_4 = not self.kings_touch(next_cell)  
-        return not (cond_1 and cond_2 and cond_3 and cond_4)
+        possibles_bishop, actions_mask_bishop = self.get_actions_for_bishop(
+            pos, turn, deny_king
+        )
+        possibles = possibles_bishop + possibles_rook
+        actions_mask = actions_mask_bishop, actions_mask_rook
 
-    def is_empty(self, cell: Cell, turn: int):
-        row, col = cell
-        return self.board[turn, row, col] == Pieces.EMPTY
+        return possibles, actions_mask
 
-    def get_king_pos(self, turn: int) -> Cell:
-        where = np.where(self.board[turn] == Pieces.KING)
-        row, col = np.concatenate(where)
-        return row, col
+    def get_actions_for_pawn(
+        self, pos: Cell, turn: int, value: int, deny_king: bool = False
+    ):
 
-    def get_enemy_king_pos(self) -> Cell:
-        return self.get_king_pos(1 - self.turn)
+        possibles, actions_mask = self.get_empty_actions("pawn")
+        if self.checked[turn] or (pos is None):
+            return possibles, actions_mask
 
-    def is_check_piece(self, enemy_king_pos: Cell, piece_pos: Cell, turn: int) -> bool:
-        rp, cp = piece_pos
-        rk, ck = enemy_king_pos
-        return Pieces.validate_move(
-            self.board[turn, rp, cp], piece_pos, (7 - rk, ck), True
-        ) and self.is_path_empty(enemy_king_pos, piece_pos)
+        if value == Pieces.QUEEN:
+            return self.get_action_for_queen(pos, value)
 
-    def is_path_empty(self, enemy_king_pos: Cell, piece_pos: Cell) -> bool:
-        rp, cp = piece_pos
-        piece = self.board[self.turn, rp, cp]
+        row, col = pos
+        for i, (r, c) in enumerate(Moves.PAWN[:4]):
+            p = (row + r, col + c)
 
-        if piece == Pieces.ROOK:
-            return self.is_path_empty_rook(enemy_king_pos, piece_pos)
+            if not self.is_in_range(p):
+                continue
 
-        if piece == Pieces.BISHOP:
-            return self.is_path_empty_bishop(enemy_king_pos, piece_pos)
+            if self.is_enemy_king(p, turn) and not deny_king:
+                continue
 
-        if piece == Pieces.QUEEN:
-            return self.is_path_empty_queen(enemy_king_pos, piece_pos)
+            can_moves = {
+                (r == 1 and self.both_side_empty(p, turn)),
+                (
+                    r == 2
+                    and row == 1
+                    and self.both_side_empty(p, turn)
+                    and self.is_path_empty(pos, p, turn)
+                ),
+                (abs(c) == 1 and self.check_for_enemy(p, turn)),
+                # TODO: EN PASSANT
+            }
 
-        # PAWN OR KNIGHT
-        return True
+            if True in can_moves:
+                possibles[i] = p
+                actions_mask[i] = 1
 
-    def is_both_side_empty(self, pos: Cell, turn: int) -> bool:
+        return possibles, actions_mask
+
+    def get_actions_for_knight(self, pos: Cell, turn: int, deny_king: bool = False):
+        possibles, actions_mask = self.get_empty_actions("knight")
+
+        if self.checked[turn] or (pos is None):
+            return possibles, actions_mask
+
+        row, col = pos
+        for i, (r, c) in enumerate(Moves.KNIGHT):
+            p = (row + r, col + c)
+            if not self.is_in_range(p):
+                continue
+            if self.is_enemy_king(p) and not deny_king:
+                continue
+            possibles[i] = p
+            actions_mask[i] = 1
+
+        return possibles, actions_mask
+
+    def get_actions_for_king(self, pos: Cell, turn: int):
+        row, col = pos
+        possibles, actions_mask = self.get_empty_actions("king")
+
+        for i, (r, c) in enumerate(Moves.KING):
+            p = (row + r, col + c)
+            if not self.is_in_range(p):
+                continue
+
+            if self.is_neighbor_enemy_king(p, turn):
+                continue
+
+            if self.is_check(p, turn):
+                continue
+
+            possibles[i] = p
+            actions_mask[i] = p
+
+        return possibles, actions_mask
+
+    def get_actions_for(self, name: str, turn: int, deny_king: bool = False):
+        assert name in self.pieces_names, f"name not in {self.pieces_names}"
+        piece_cat = name.split("_")[0]
+        piece_pos = self.pieces[turn][name]
+        piece_val = self.board[turn, piece_pos[0], piece_pos[1]]
+
+        if piece_cat == "pawn":
+            return self.get_actions_for_pawn(piece_pos, turn, piece_val, deny_king)
+
+        if piece_cat == "knight":
+            return self.get_actions_for_knight(piece_pos, turn, deny_king)
+
+        if piece_cat == "rook":
+            return self.get_actions_for_rook(piece_pos, turn, deny_king)
+
+        if piece_cat == "bishop":
+            return self.get_actions_for_bishop(piece_pos, turn, deny_king)
+
+        if piece_cat == "queen":
+            return self.get_action_for_queen(piece_pos, turn, deny_king)
+
+        if piece_cat == "king":
+            return self.get_actions_for_king(piece_pos, turn)
+
+    def get_all_actions(self, turn: int, deny_king: bool = False):
+        all_possibles = []
+        all_actions_mask = []
+        for name in self.pieces[turn].keys():
+            possibles, actions_mask = self.get_actions_for(name, turn, deny_king)
+            all_possibles.append(possibles)
+            all_actions_mask.append(all_actions_mask)
+
+        return np.concatenate(all_possibles), np.concatenate(all_actions_mask)
+
+    def check_for_enemy(self, pos: Cell, turn: int) -> bool:
         r, c = pos
-        c1 = self.is_empty((r, c), turn)
-        c2 = self.is_empty((7 - r, c), 1 - turn)
-        c3 = self.board[1 - turn, 7 - r, c] == Pieces.KING
-        return c1 and c2 or c3
+        return not self.is_empty((7 - r, c), 1 - turn)
 
-    def is_path_empty_queen(self, enemy_king_pos: Cell, piece_pos: Cell) -> bool:
-        rp, cp = piece_pos
-        rk, ck = enemy_king_pos
-        if 7 - rk == rp or ck == cp:
-            return self.is_path_empty_rook(enemy_king_pos, piece_pos)
-        return self.is_path_empty_bishop(enemy_king_pos, piece_pos)
+    def is_empty(self, pos: Cell, turn: int) -> bool:
+        return self.board[turn, pos[0], pos[1]] == Pieces.EMPTY
 
-    def is_path_empty_rook(self, enemy_king_pos: Cell, piece_pos: Cell) -> bool:
-        rp, cp = piece_pos
-        rk, ck = enemy_king_pos
-        rk = 7 - rk
+    def is_enemy_king(self, pos: Cell, turn: int):
+        r, c = pos
+        return self.board[1 - turn, 7 - r, c] == Pieces.KING
 
-        if rk == rp:
-            d = ck - cp
-            s = np.sign(d)
-            for i in range(1, abs(d)):
-                nc = cp + i * s
-                if not self.is_both_side_empty((rk, nc), self.turn):
-                    return False
+    def both_side_empty(self, pos: Cell, turn: int):
+        r, c = pos
+        return self.is_empty(pos, turn) and self.is_empty((7 - r, c), 1 - turn)
 
-        elif ck == cp:
-            d = rk - rp
-            s = np.sign(d)
-            for i in range(1, abs(d)):
-                nr = rp + i * s
-                if not self.is_both_side_empty((nr, ck), self.turn):
-                    return False
+    def get_pos_king(self, turn: int) -> Cell:
+        row, col = np.where(self.board[turn] == Pieces.KING)
+        return row[0], col[0]
 
-        return True
+    def is_neighbor_enemy_king(self, pos: Cell, turn: int):
+        row, col = pos
+        row_enemy_king, col_enemy_king = self.get_pos_king(1 - turn)
+        row_enemy_king = 7 - row_enemy_king
+        diff_row = abs(row - row_enemy_king)
+        diff_col = abs(col - col_enemy_king)
+        return diff_row <= 1 and diff_col <= 1
 
-    def is_path_empty_bishop(self, enemy_king_pos: Cell, piece_pos: Cell) -> bool:
-        rp, cp = piece_pos
-        rk, ck = enemy_king_pos
-        rk = 7 - rk
-        dr = rk - rp
-        dc = ck - cp
-        for i in range(1, abs(dr)):
-            nr = rp + i * np.sign(dr)
-            nc = cp + i * np.sign(dc)
-            if not self.is_both_side_empty((nr, nc), self.turn):
-                return False
-        return True
+    def is_check(self, king_pos: Cell, turn: int):
+        row, col = king_pos
+        row = 7 - row
+        enemy_possible_moves, _ = self.get_all_actions(1 - turn, True)
+        return (row, col) in enemy_possible_moves
 
-    def is_check(self, king_pos: Cell = None, turn: int = None) -> bool:
-        turn = self.turn if turn is None else turn
-        king_pos = self.get_enemy_king_pos() if (king_pos is None) else king_pos
-        for re in range(8):
-            for ce in range(8):
-                if self.is_check_piece(king_pos, (re, ce), turn):
-                    return True
-        return False
+    def update_checks(self, rewards: list[int] = None, infos: list[set] = None):
+        rewards = [0, 0] if rewards is None else rewards
+        infos = [set(), set()] if infos is None else infos
 
-    def get_king_next_possible_pos(self, king_pos: Cell) -> list:
-        rk, ck = king_pos
-        nxt_ps = []
-        for i in range(-1, 2):
-            for j in range(-1, 2):
-                rn = rk + i
-                cn = ck + j
-                if (
-                    (-1 < rn < 8)
-                    and (-1 < cn < 8)
-                    and self.is_empty((rn, cn), 1 - self.turn)
-                ):
-                    nxt_ps.append((rn, cn))
-        return nxt_ps
+        for turn in range(2):
+            king_pos = self.get_pos_king(turn)
+            is_check = self.is_check(king_pos, turn)
+            self.checked[turn] = is_check
+            if is_check:
+                rewards[turn] += Rewards.CHECK_LOSE
+                rewards[1 - turn] += Rewards.CHECK_WIN
 
-    def is_check_mate(self):
-        king_pos = self.get_enemy_king_pos()
-        for next_king_pos in self.get_king_next_possible_pos(king_pos):
-            if not self.is_check(next_king_pos):
-                return False
-        return True
-
-    def is_not_check_free(self, current_cell: Cell, next_cell: Cell) -> bool:
-        row, col = current_cell
-        cond_1 = self.checked[self.turn]
-        cond_2 = self.board[self.turn, row, col] != Pieces.KING
-        cond_3 = self.is_check(next_cell, 1 - self.turn)
-        return cond_1 and cond_2 and cond_3
-
-    def validate_and_move(
-        self, current_cell: Cell, next_cell: Cell
-    ) -> tuple[float, dict]:
-        infos = [{}, {}]
-        rewards = [0, 0]
-
-        if self.is_not_check_free(current_cell, next_cell):
-            rewards[self.turn] = Rewards.WRONG_MOVE
-            infos[self.turn][InfoKeys.WRONG_MOVE] = True
-            return rewards, infos
-
-        if self.is_empty(current_cell, self.turn):
-            rewards[self.turn] = Rewards.EMPTY_SELECT
-            infos[self.turn][InfoKeys.EMPTY_SELECT] = True
-            return rewards, infos
-
-        if self.is_wrong_move(current_cell, next_cell):
-            rewards[self.turn] = Rewards.WRONG_MOVE
-            infos[self.turn][InfoKeys.WRONG_MOVE] = True
-            return rewards, infos
-
-        rewards = [Rewards.MOVE, Rewards.MOVE]
-        self.checked = [False, False]
-
-        self.empty_enemy_cell(next_cell)
-        self.move_piece(current_cell, next_cell)
-        self.promote_pawn(next_cell)
-
-        if self.is_check_mate():
-            rewards[self.turn] = Rewards.CHECK_MATE_LOSE
-            infos[self.turn][InfoKeys.CHECK_MATE_WIN] = True
-
-            rewards[1 - self.turn] = Rewards.CHECK_MATE_LOSE
-            infos[1 - self.turn][InfoKeys.CHECK_MATE_LOSE] = True
-
-            self.done = True
-
-        elif self.is_check():
-            infos[self.turn][InfoKeys.CHECK_WIN] = True
-            rewards[self.turn] = Rewards.CHECK_WIN
-
-            infos[1 - self.turn][InfoKeys.CHECK_LOSE] = True
-            rewards[1 - self.turn] = Rewards.CHECK_LOSE
-
-            self.checked[self.turn] = False
-            self.checked[1 - self.turn] = True
-
-        self.steps += 1
-        self.turn = 1 - self.turn
-
+                infos[turn].add(InfoKeys.CHECK_LOSE)
+                infos[1 - turn].add(InfoKeys.CHECK_WIN)
+                break
         return rewards, infos
 
-    def step(self, action: Action) -> Trajectory:
-        current_cell, next_cell = action
-        rewards, infos = self.validate_and_move(current_cell, next_cell)
-        done = (self.steps >= self.max_steps) or (self.done)
-        return rewards, done, infos
+    def is_check_mate(self, rewards: list[int] = None, infos: list[set] = None):
+        rewards = [0, 0] if rewards is None else rewards
+        infos = [set(), set()] if infos is None else infos
 
-    def get_state(self, turn: int) -> np.ndarray:
-        arr = self.board.copy()
-        if turn == Pieces.WHITE:
-            arr[[0, 1]] = arr[[1, 0]]
-        return arr.flatten()
-
-    def close(self):
-        pygame.quit()
+        for turn in range(2):
+            _, actions = self.get_all_actions(turn)
+            if np.all(actions == 0):
+                rewards[turn] += Rewards.CHECK_MATE_LOSE
+                rewards[1 - turn] += Rewards.CHECK_MATE_WIN
+                
+                infos[turn].add(InfoKeys.CHECK_MATE_LOSE)
+                infos[1 - turn].add(InfoKeys.CHECK_MATE_WIN)
+                break
+        
+        return rewards, infos
+    
+    def step(self, action: int):
+        assert action < 584, "action number must be less than 584"
+        possibles, actions_mask = self.get_all_actions(self.turn)
+        assert actions_mask[action], "Cannot Take This Action"
+        pass

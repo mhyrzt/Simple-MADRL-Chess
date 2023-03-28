@@ -2,8 +2,8 @@ import gym
 import numpy as np
 import torch as T
 import torch.optim as optim
-from tqdm.autonotebook import tqdm
 
+from tqdm import tqdm
 from buffer.ppo import BufferPPO
 from buffer.episode import Episode
 
@@ -22,9 +22,9 @@ class PPO(Learning):
         epochs: int,
         buffer_size: int,
         batch_size: int,
+        gamma: float = 0.99,
         gae_lambda: float = 0.95,
         policy_clip: float = 0.2,
-        gamma: float = 0.99,
     ) -> None:
         super().__init__(environment, state_dim, action_dim, epochs, gamma)
         self.gae_lambda = gae_lambda
@@ -39,13 +39,13 @@ class PPO(Learning):
         self.hidden_layers = hidden_layers
         self.actor = Actor(self.state_dim, self.action_dim, hidden_layers, self.device)
         self.critic = Critic(self.state_dim, hidden_layers)
-        self.actor_optimizer = optim.Adam(self.actor.parameters())
+        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=0.003)
         self.critic_optimizer = optim.Adam(self.critic.parameters())
 
         self.to(self.device)
 
     def take_action(self, state: np.ndarray):
-        state = T.Tensor([state]).to(self.device)
+        state = T.Tensor(state).unsqueeze(0).to(self.device)
         value = T.squeeze(self.critic(state)).item()
         prob, action, _ = self.actor(state)
         return action[0], prob[0], value
@@ -61,7 +61,7 @@ class PPO(Learning):
             advantages_arr,
             batches,
         ) = self.buffer.sample()
-
+        
         for batch in batches:
             values = T.Tensor(values_arr[batch]).to(self.device)
             states = T.Tensor(states_arr[batch]).to(self.device)
@@ -89,11 +89,11 @@ class PPO(Learning):
             total_loss.backward()
             self.actor_optimizer.step()
             self.critic_optimizer.step()
+            
 
     def learn(self):
-        for epoch in tqdm(range(self.epochs), desc="PPO Learning...", ncols=128):
+        for epoch in tqdm(range(self.epochs), desc="PPO Learning...", ncols=64):
             self.epoch()
-        self.buffer.clear()
 
     def remember(self, episode: Episode):
         self.buffer.add(episode)

@@ -27,7 +27,9 @@ Contributions to this project are welcome. If you have any ideas or suggestions,
 
 ### TODO ✔️
 
-- [ ] Complete Agents
+- [x] Complete Agents
+- [x] Bug Rook, Queen, Bishop jump over pieces.
+- [x] Check Mate Bug.
 - [ ] Test Another scenario :))
 
 ## License 🔑

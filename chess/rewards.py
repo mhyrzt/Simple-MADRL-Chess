@@ -1,12 +1,10 @@
-class Rewards:
-    MOVE = -10
-    
-    CHECK_WIN = +50
-    CHECK_LOSE = -50
-    
-    CHECK_MATE_WIN = +100
-    CHECK_MATE_LOSE = -100
-    
-    WRONG_MOVE = -500
-    EMPTY_SELECT = -800
-    
+MOVE = -10
+
+CHECK_WIN = +50
+CHECK_LOSE = -50
+
+CHECK_MATE_WIN = +100
+CHECK_MATE_LOSE = -100
+
+WRONG_MOVE = -500
+EMPTY_SELECT = -800
