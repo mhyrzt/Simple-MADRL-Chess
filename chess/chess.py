@@ -28,7 +28,7 @@ class Chess(gym.Env):
     ) -> None:
         self.action_space = spaces.Discrete(640)
         self.observation_space = spaces.Box(0, 7, (128,), dtype=np.int32)
-        
+
         self.board: np.ndarray = self.init_board()
         self.pieces: list[dict] = self.init_pieces()
         self.pieces_names: list[str] = self.get_pieces_names()
@@ -318,6 +318,7 @@ class Chess(gym.Env):
 
         if self.checked[turn] or (pos is None):
             return possibles, actions_mask
+
         row, col = pos
         for i, (r, c) in enumerate(Moves.KNIGHT):
             p = (row + r, col + c)
@@ -459,10 +460,9 @@ class Chess(gym.Env):
 
     def is_check(self, king_pos: Cell, turn: int):
         row, col = king_pos
-        row = 7 - row
         _, enemy_possible_moves, _ = self.get_all_actions(1 - turn, True)
-        for pos in enemy_possible_moves:
-            if tuple(pos) == (row, col):
+        for (r, c) in enemy_possible_moves:
+            if r == 7 - row and c == col:
                 return True
         return False
 
@@ -519,18 +519,19 @@ class Chess(gym.Env):
 
         rewards = [Rewards.MOVE, Rewards.MOVE]
         rewards[1 - turn] *= 2
-        
+
         return rewards, [set(), set()]
 
     def is_game_done(self):
-        return self.done or self.steps >= self.max_steps
-    
+        return self.done or (self.steps >= self.max_steps)
+
     def promote_pawn(self, pos: Cell, turn: int):
         row, col = pos
-        if self.board[turn, row, col] == Pieces.PAWN:
+        if self.board[turn, row, col] == Pieces.PAWN and row == 7:
             self.board[turn, row, col] = Pieces.QUEEN
-        
+
     def step(self, action: int):
+        assert not self.is_game_done(), "the game is finished reset"
         assert action < 640, "action number must be less than 640"
 
         source_pos, possibles, actions_mask = self.get_all_actions(self.turn)
