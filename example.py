@@ -16,8 +16,10 @@ if __name__ == "__main__":
     )
     print(ppo.device)
     print(ppo)
-    
-    agent = SingleAgentChess(env=chess, learner=ppo, episodes=1000, train_on=buffer_size)
+
+    agent = SingleAgentChess(
+        env=chess, learner=ppo, episodes=1_500, train_on=buffer_size
+    )
     agent.train()
     agent.save("results")
 
