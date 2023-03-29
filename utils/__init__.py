@@ -1,6 +1,7 @@
 import numpy as np
 import torch as T
 import torch.nn as nn
+import cv2
 
 
 def build_base_model(
@@ -37,3 +38,19 @@ def make_batch_ids(n: int, batch_size: int, shuffle: bool = True) -> np.ndarray:
 
 def tensor_to_numpy(x: T.Tensor) -> np.ndarray:
     return x.detach().cpu().numpy()
+
+
+def save_to_video(path: str, frames: np.ndarray, fps: int = 1):
+    size = frames.shape[1:3]
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(
+        path,
+        fourcc,
+        fps,
+        size,
+    )
+    for f in frames:
+        out.write(f)
+        out.write(f)
+    out.release()
+    
