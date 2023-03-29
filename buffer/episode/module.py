@@ -1,4 +1,3 @@
-from buffer.base import Buffer
 import numpy as np
 
 
@@ -6,6 +5,7 @@ class Episode:
     def __init__(self) -> None:
         self.goals = []
         self.probs = []
+        self.masks = []
         self.values = []
         self.states = []
         self.rewards = []
@@ -19,6 +19,7 @@ class Episode:
         goal: bool,
         prob: float = None,
         value: float = None,
+        masks: np.ndarray = None,
     ):
         self.goals.append(goal)
         self.states.append(state)
@@ -29,13 +30,14 @@ class Episode:
             self.probs.append(prob)
         if value is not None:
             self.values.append(value)
-        
-        
+        if masks is not None:
+            self.masks.append(masks)
+
     def calc_advantage(self, gamma: float, gae_lambda: float) -> np.ndarray:
         n = len(self.rewards)
         advantages = np.zeros(n)
         for t in range(n - 1):
-            discount = 1 
+            discount = 1
             for k in range(t, n - 1):
                 advantages[t] += (
                     discount
@@ -48,6 +50,5 @@ class Episode:
                 discount *= gamma * gae_lambda
         return list(advantages)
 
-    
     def __len__(self):
         return len(self.goals)

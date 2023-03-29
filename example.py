@@ -2,35 +2,23 @@ import numpy as np
 from chess import Chess
 from agents import SingleAgentChess
 from learnings.ppo import PPO
-import sys
 
-sys.setrecursionlimit(10 ** 6)
-
-buffer_size = 10
+buffer_size = 16
 if __name__ == "__main__":
-    chess = Chess(window_size=512)
+    chess = Chess(window_size=512, max_steps=90, render_mode="rgb_array")
+    chess.reset()
     ppo = PPO(
         chess,
-        state_dim=8 * 8 * 2,
-        action_dim=8 * 2 * 2,
         hidden_layers=(1024, 1024, 1024, 1024),
-        epochs=100,
+        epochs=50,
         buffer_size=buffer_size,
-        batch_size=64,
+        batch_size=512,
     )
-
-    agent = SingleAgentChess(env=chess, learner=ppo, episodes=100, train_on=1)
     print(ppo.device)
+    print(ppo)
+    
+    agent = SingleAgentChess(env=chess, learner=ppo, episodes=1000, train_on=buffer_size)
     agent.train()
+    agent.save("results")
 
-
-    def save(x: SingleAgentChess):
-        np.save("results/mates.npy", x.mates)
-        np.save("results/checks.npy", x.checks)
-        np.save("results/rewards.npy", x.rewards)
-        np.save("results/wrong_move.npy", x.wrong_move)
-        np.save("results/empty_select.npy", x.empty_select)
-
-
-    save(agent)
     chess.close()

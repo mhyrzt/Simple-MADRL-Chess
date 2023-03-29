@@ -33,6 +33,7 @@ class BufferPPO(Buffer):
     def sample(self):
         probs = sum(map(lambda x: x.probs, self.episodes), [])
         goals = sum(map(lambda x: x.goals, self.episodes), [])
+        masks = sum(map(lambda x: x.masks, self.episodes), [])
         values = sum(map(lambda x: x.values, self.episodes), [])
         states = sum(map(lambda x: x.states, self.episodes), [])
         actions = sum(map(lambda x: x.actions, self.episodes), [])
@@ -50,6 +51,7 @@ class BufferPPO(Buffer):
             np.array(goals),
             np.array(probs),
             np.array(values),
+            np.array(masks),
             np.array(advantages),
             batches,
         )

@@ -9,23 +9,23 @@ class Learning(nn.Module, ABC):
     def __init__(
         self,
         environment: gym.Env,
-        state_dim: int,
-        action_dim: int,
         epochs: int,
         gamma: float,
+        learning_rate: float
     ) -> None:
         super().__init__()
-        self.state_dim = state_dim
-        self.action_dim = action_dim
+        self.state_dim = environment.observation_space.shape[0]
+        self.action_dim = environment.action_space.n
         self.environment = environment
 
         self.gamma = gamma
         self.epochs = epochs
+        self.learning_rate = learning_rate
 
         self.device = T.device("cuda:0" if T.cuda.is_available() else "cpu")
 
     @abstractmethod
-    def take_action(self, state: np.ndarray):
+    def take_action(self, state: np.ndarray, *args):
         pass
 
     @abstractmethod

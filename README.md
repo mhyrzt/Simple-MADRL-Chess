@@ -25,13 +25,6 @@ python3 -m pip install requirements.txt
 
 Contributions to this project are welcome. If you have any ideas or suggestions, feel free to open an issue or submit a pull request.
 
-### TODO ✔️
-
-- [x] Complete Agents
-- [x] Bug Rook, Queen, Bishop jump over pieces.
-- [x] Check Mate Bug.
-- [ ] Test Another scenario :))
-
 ## License 🔑
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.

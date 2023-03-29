@@ -16,8 +16,6 @@ class PPO(Learning):
     def __init__(
         self,
         environment: gym.Env,
-        state_dim: int,
-        action_dim: int,
         hidden_layers: tuple[int],
         epochs: int,
         buffer_size: int,
@@ -25,8 +23,10 @@ class PPO(Learning):
         gamma: float = 0.99,
         gae_lambda: float = 0.95,
         policy_clip: float = 0.2,
+        learning_rate: float = 0.003,
     ) -> None:
-        super().__init__(environment, state_dim, action_dim, epochs, gamma)
+        super().__init__(environment, epochs, gamma, learning_rate)
+
         self.gae_lambda = gae_lambda
         self.policy_clip = policy_clip
         self.buffer = BufferPPO(
@@ -37,18 +37,22 @@ class PPO(Learning):
         )
 
         self.hidden_layers = hidden_layers
-        self.actor = Actor(self.state_dim, self.action_dim, hidden_layers, self.device)
+        self.actor = Actor(self.state_dim, self.action_dim, hidden_layers)
         self.critic = Critic(self.state_dim, hidden_layers)
-        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=0.003)
-        self.critic_optimizer = optim.Adam(self.critic.parameters())
+        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=learning_rate)
+        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=learning_rate)
 
         self.to(self.device)
 
-    def take_action(self, state: np.ndarray):
+    def take_action(self, state: np.ndarray, action_mask: np.ndarray):
         state = T.Tensor(state).unsqueeze(0).to(self.device)
+        action_mask = T.Tensor(action_mask).unsqueeze(0).to(self.device)
+        dist = self.actor(state, action_mask)
+        action = dist.sample()
+        probs = T.squeeze(dist.log_prob(action)).item()
         value = T.squeeze(self.critic(state)).item()
-        prob, action, _ = self.actor(state)
-        return action[0], prob[0], value
+        action = T.squeeze(action).item()
+        return action, probs, value
 
     def epoch(self):
         (
@@ -58,20 +62,23 @@ class PPO(Learning):
             goals_arr,
             old_probs_arr,
             values_arr,
+            masks_arr,
             advantages_arr,
             batches,
         ) = self.buffer.sample()
-        
+
         for batch in batches:
+            masks = T.Tensor(masks_arr[batch]).to(self.device)
             values = T.Tensor(values_arr[batch]).to(self.device)
             states = T.Tensor(states_arr[batch]).to(self.device)
+            actions = T.Tensor(actions_arr[batch]).to(self.device)
             old_probs = T.Tensor(old_probs_arr[batch]).to(self.device)
             advantages = T.Tensor(advantages_arr[batch]).to(self.device)
 
-            _, _, calc_log_probs = self.actor(states)
+            dist = self.actor(states, masks)
             critic_value = T.squeeze(self.critic(states))
 
-            new_probs = calc_log_probs(actions_arr[batch])
+            new_probs = dist.log_prob(actions)
             prob_ratio = (new_probs - old_probs).exp()
 
             weighted_probs = advantages * prob_ratio
@@ -89,7 +96,6 @@ class PPO(Learning):
             total_loss.backward()
             self.actor_optimizer.step()
             self.critic_optimizer.step()
-            
 
     def learn(self):
         for epoch in tqdm(range(self.epochs), desc="PPO Learning...", ncols=64):

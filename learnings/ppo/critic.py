@@ -8,8 +8,7 @@ class Critic(nn.Module):
         super().__init__()
         self.state_dim = state_dim
         self.hidden_layers = hidden_layers
-        self.model = build_base_model(state_dim, hidden_layers)
-        self.value = nn.Linear(hidden_layers[-1], 1)
+        self.model = build_base_model(state_dim, hidden_layers, 1)
 
     def forward(self, state: T.Tensor):
-        return self.value(self.model(state))
+        return self.model(state)

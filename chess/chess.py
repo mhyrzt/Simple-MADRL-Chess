@@ -489,7 +489,7 @@ class Chess(gym.Env):
 
         for turn in range(2):
             _, _, actions = self.get_all_actions(turn)
-            if np.all(actions == 0):
+            if np.sum(actions) == 0:
                 self.done = True
                 rewards[turn] += Rewards.CHECK_MATE_LOSE
                 rewards[1 - turn] += Rewards.CHECK_MATE_WIN
@@ -506,9 +506,9 @@ class Chess(gym.Env):
         self.board[turn, next_row, next_col] = self.board[
             turn, current_row, current_col
         ]
+        self.promote_pawn(next_pos, turn)
         self.board[turn, current_row, current_col] = Pieces.EMPTY
         self.board[1 - turn, 7 - next_row, next_col] = Pieces.EMPTY
-
         for (key, value) in self.pieces[turn].items():
             if value == tuple(current_pos):
                 self.pieces[turn][key] = tuple(next_pos)
@@ -517,18 +517,24 @@ class Chess(gym.Env):
             if value == (7 - next_pos[0], next_pos[1]):
                 self.pieces[1 - turn][key] = None
 
-        return [Rewards.MOVE, Rewards.MOVE], [set(), set()]
+        rewards = [Rewards.MOVE, Rewards.MOVE]
+        rewards[1 - turn] *= 2
+        
+        return rewards, [set(), set()]
 
     def is_game_done(self):
         return self.done or self.steps >= self.max_steps
-
+    
+    def promote_pawn(self, pos: Cell, turn: int):
+        row, col = pos
+        if self.board[turn, row, col] == Pieces.PAWN:
+            self.board[turn, row, col] = Pieces.QUEEN
+        
     def step(self, action: int):
-        assert not self.done, "Game Finished, call reset method for another game"
         assert action < 640, "action number must be less than 640"
 
         source_pos, possibles, actions_mask = self.get_all_actions(self.turn)
         assert actions_mask[action], f"Cannot Take This Action = {action}"
-
         rewards, infos = self.move_piece(
             source_pos[action], possibles[action], self.turn
         )

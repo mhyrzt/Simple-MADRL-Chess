@@ -3,7 +3,12 @@ import torch as T
 import torch.nn as nn
 
 
-def build_base_model(input_size: int, hidden_layers: tuple[int]) -> nn.Module:
+def build_base_model(
+    input_size: int,
+    hidden_layers: tuple[int],
+    output_size: int,
+    last_activation: nn.Module = nn.Identity(),
+) -> nn.Module:
     layers = [
         nn.Linear(input_size, hidden_layers[0]),
         nn.ReLU(),
@@ -17,6 +22,8 @@ def build_base_model(input_size: int, hidden_layers: tuple[int]) -> nn.Module:
             nn.ReLU(),
         ]
 
+    layers += [nn.Linear(hidden_layers[-1], output_size), last_activation]
+
     return nn.Sequential(*layers)
 
 
@@ -26,6 +33,7 @@ def make_batch_ids(n: int, batch_size: int, shuffle: bool = True) -> np.ndarray:
     if shuffle:
         np.random.shuffle(indices)
     return [indices[i : i + batch_size] for i in starts]
+
 
 def tensor_to_numpy(x: T.Tensor) -> np.ndarray:
     return x.detach().cpu().numpy()
