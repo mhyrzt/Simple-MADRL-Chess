@@ -100,6 +100,7 @@ class PPO(Learning):
     def learn(self):
         for epoch in tqdm(range(self.epochs), desc="PPO Learning...", ncols=64):
             self.epoch()
+        self.buffer.clear()
 
     def remember(self, episode: Episode):
         self.buffer.add(episode)
