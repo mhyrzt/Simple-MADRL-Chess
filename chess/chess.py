@@ -200,7 +200,7 @@ class Chess(gym.Env):
 
         if diff_col:
             cols = np.arange(current_col + sign_col, next_col, sign_col, dtype=np.int32)
-        
+
         for pos in zip(rows, cols):
             if not self.both_side_empty(tuple(pos), turn):
                 return False
@@ -224,7 +224,7 @@ class Chess(gym.Env):
             if not self.is_empty(p, turn):
                 continue
 
-            if self.is_enemy_king(p, turn) and not deny_enemy_king:
+            if self.is_enemy_king(p, turn) and (not deny_enemy_king):
                 continue
 
             if not self.is_path_empty(pos, p, turn):
@@ -250,7 +250,7 @@ class Chess(gym.Env):
             if not self.is_empty(p, turn):
                 continue
 
-            if self.is_enemy_king(p, turn) and not deny_enemy_king:
+            if self.is_enemy_king(p, turn) and (not deny_enemy_king):
                 continue
 
             if not self.is_path_empty(pos, p, turn):
@@ -290,7 +290,7 @@ class Chess(gym.Env):
             if not self.is_empty(p, turn):
                 continue
 
-            if self.is_enemy_king(p, turn) and not deny_enemy_king:
+            if self.is_enemy_king(p, turn) and (not deny_enemy_king):
                 continue
 
             can_moves = (
@@ -328,7 +328,7 @@ class Chess(gym.Env):
             if not self.is_empty(p, turn):
                 continue
 
-            if self.is_enemy_king(p, turn) and not deny_enemy_king:
+            if self.is_enemy_king(p, turn) and (not deny_enemy_king):
                 continue
 
             possibles[i] = p
