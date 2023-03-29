@@ -6,6 +6,9 @@ from buffer.episode import Episode
 from learnings.base import Learning
 from tqdm import tqdm
 from chess import Chess
+import torch as T
+from utils import save_to_video
+import traceback
 
 
 class Index:
@@ -29,11 +32,12 @@ class SingleAgentChess:
         self.train_on = train_on
         self.current_ep = 0
 
+        self.moves = np.zeros((2, episodes), dtype=np.int64)
+        self.rewards = np.zeros((2, episodes))
         self.mates_win = np.zeros((2, episodes), dtype=np.int64)
         self.checks_win = np.zeros((2, episodes), dtype=np.int64)
         self.mates_lose = np.zeros((2, episodes), dtype=np.int64)
         self.checks_lose = np.zeros((2, episodes), dtype=np.int64)
-        self.rewards = np.zeros((2, episodes))
 
     def update_stats(self, infos: list[dict]):
         for turn, info in enumerate(infos):
@@ -55,12 +59,18 @@ class SingleAgentChess:
 
         action, prob, value = self.learner.take_action(state, mask)
         rewards, done, infos = self.env.step(action)
+        self.moves[turn, self.current_ep] += 1
 
         self.update_stats(infos)
         goal = InfoKeys.CHECK_MATE_WIN in infos[turn]
         episode.add(state, rewards[turn], action, goal, prob, value, mask)
+        return done, [state, rewards, action, goal, prob, value, mask]
 
-        return [state, rewards, action, goal, prob, value, mask]
+    def update_enemy(self, prev: list, episode: Episode, reward: int):
+        if prev is None:
+            return
+        prev[1] = reward
+        episode.add(*prev)
 
     def train_episode(self, render: bool):
         renders = []
@@ -75,49 +85,44 @@ class SingleAgentChess:
         white_data: list = None
         black_data: list = None
         render_fn()
-        while not self.env.is_game_done():
-            try:
-                white_data = self.take_action(Pieces.WHITE, episode_white)
-                render_fn()
+        while True:
+            done, white_data = self.take_action(Pieces.WHITE, episode_white)
+            if done:
+                break
+            self.update_enemy(black_data, episode_black, white_data[1][Pieces.BLACK])
+            render_fn()
 
-                if black_data:
-                    black_copy = black_data.copy()
-                    black_copy[1] = white_data[1][Pieces.BLACK]
-                    episode_black.add(*black_copy)
-
-                black_data = self.take_action(Pieces.BLACK, episode_black)
-                render_fn()
-
-                white_copy = white_data.copy()
-                white_copy[1] = black_data[1][Pieces.WHITE]
-                episode_white.add(*white_copy)
-
-            except Exception as e:
-
-                done = True
+            done, black_data = self.take_action(Pieces.BLACK, episode_black)
+            if done:
+                break
+            self.update_enemy(white_data, episode_white, black_data[1][Pieces.WHITE])
+            render_fn()
 
         self.learner.remember(episode_white)
         self.learner.remember(episode_black)
         if render:
-            np.save(f"results/renders/episode_{self.current_ep}.npy", np.array(renders))
+            path = f"results/renders/episode_{self.current_ep}.mp4"
+            save_to_video(path, np.array(renders))
+            print(f"*** EPISODE SAVED TO: {path} ***")
+
         return sum(episode_white.rewards), sum(episode_black.rewards)
 
     def log(self, episode: int):
         return "\n".join(
             [
-                f"+ Results:",
+                f"+ Episode {episode} Results [B | w]:",
+                f"\t- Moves  = {self.moves[:, episode]}",
                 f"\t- Reward = {self.rewards[:, episode]}",
-                f"\t- Checks (win, lose) = {self.checks_win[:, episode]} - {self.checks_lose[:, episode]}",
-                f"\t- Mates (win, lose) = {self.mates_win[:, episode]} - {self.mates_lose[:, episode]}",
+                f"\t- Checks = {self.checks_win[:, episode]}",
+                f"\t- Mates  = {self.mates_win[:, episode]}",
+                "-" * 64,
             ]
         )
 
-    def train(self):
+    def train(self, save_each: int = 10):
         for ep in range(self.episodes):
-            print("-" * 64)
-            print(f"Episode: {ep + 1}")
             white_reward, black_reward = self.train_episode(
-                ep % 100 == 0 or ep == self.episodes - 1
+                ep % save_each == 0 or ep == self.episodes - 1
             )
             self.rewards[0, ep] = black_reward
             self.rewards[1, ep] = white_reward
@@ -132,3 +137,4 @@ class SingleAgentChess:
         np.save(os.path.join(folder, "mates_lose.npy"), self.mates_lose)
         np.save(os.path.join(folder, "checks_win.npy"), self.checks_win)
         np.save(os.path.join(folder, "checks_lose.npy"), self.checks_lose)
+        T.save(self.learner, os.path.join(folder, "learner.pt"))
