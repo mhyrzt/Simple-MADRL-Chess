@@ -87,16 +87,16 @@ class SingleAgentChess:
         render_fn()
         while True:
             done, white_data = self.take_action(Pieces.WHITE, episode_white)
-            if done:
-                break
             self.update_enemy(black_data, episode_black, white_data[1][Pieces.BLACK])
             render_fn()
-
-            done, black_data = self.take_action(Pieces.BLACK, episode_black)
             if done:
                 break
+
+            done, black_data = self.take_action(Pieces.BLACK, episode_black)
             self.update_enemy(white_data, episode_white, black_data[1][Pieces.WHITE])
             render_fn()
+            if done:
+                break
 
         self.learner.remember(episode_white)
         self.learner.remember(episode_black)
