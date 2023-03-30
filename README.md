@@ -31,12 +31,6 @@ Contributions to this project are welcome. If you have any ideas or suggestions,
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-## ⚠️ Warnings & Notes
-
-- Please note that the chess environment implemented in this project may have some bugs, particularly in the check and checkmate situations. While the environment has been designed to simulate the game of chess as accurately as possible, there may be some corner cases that have not been fully tested. We recommend using caution when interpreting the results of the agent's performance, particularly in situations where check and checkmate occur. We encourage users to report any issues they encounter to help improve the quality of the environment.
-
-- Please note that ChatGPT, a language model trained by OpenAI, was only used to create the README.md file for this project. All other code and contributions were made solely by [Your Name] and other contributors.
-  
 ## 📚 References
 
 - [Mastering Chess and Shogi by Self-Play with a General Reinforcement Learning Algorithm](https://arxiv.org/abs/1712.01815)
@@ -44,6 +38,12 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 - [Action Space Shaping in Deep Reinforcement Learning](https://arxiv.org/abs/2004.00980)
 - [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347)
 
+## ⚠️ Warnings & Notes
+
+- Please note that the chess environment implemented in this project may have some bugs, particularly in the check and checkmate situations. While the environment has been designed to simulate the game of chess as accurately as possible, there may be some corner cases that have not been fully tested. We recommend using caution when interpreting the results of the agent's performance, particularly in situations where check and checkmate occur. We encourage users to report any issues they encounter to help improve the quality of the environment.
+
+- Please note that ChatGPT, was only used to create the README.md file for this project. All other code and contributions were made solely by me and other contributors. ツ
+  
 ## 🗣️ Citation
 
 COMING SOON...
