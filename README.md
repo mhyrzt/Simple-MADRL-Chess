@@ -23,7 +23,7 @@ cd Simple-MADRL-Chess
 python3 -m pip install requirements.txt
 ```
 
-### 🏋️ Train
+## 🏋️ Train
 
 you can either run default train.py file:
 
@@ -34,7 +34,6 @@ python3 train.py
 or you can create your own file:
 
 ```python
-import numpy as np
 from chess import Chess
 from agents import SingleAgentChess, DoubleAgentsChess
 from learnings.ppo import PPO
@@ -78,7 +77,7 @@ if __name__ == "__main__":
 
 ```
 
-### 🎮 Play
+## 🎮 Play
 
 TODO
 
