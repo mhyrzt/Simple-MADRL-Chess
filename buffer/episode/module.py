@@ -52,3 +52,6 @@ class Episode:
 
     def __len__(self):
         return len(self.goals)
+
+    def total_reward(self) -> float:
+        return sum(self.rewards)
