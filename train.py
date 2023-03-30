@@ -7,6 +7,7 @@ buffer_size = 16
 if __name__ == "__main__":
     chess = Chess(window_size=512, max_steps=128, render_mode="rgb_array")
     chess.reset()
+    
     ppo = PPO(
         chess,
         hidden_layers=(2048,) * 4,
@@ -14,13 +15,18 @@ if __name__ == "__main__":
         buffer_size=buffer_size,
         batch_size=256,
     )
+    
     print(ppo.device)
     print(ppo)
     print("-" * 64)
 
     agent = SingleAgentChess(
-        env=chess, learner=ppo, episodes=500, train_on=buffer_size
+        env=chess,
+        learner=ppo,
+        episodes=40,
+        train_on=buffer_size,
+        result_folder="results",
     )
-    agent.train()
-    agent.save("results")
+    agent.train(render_each=10)
+    agent.save()
     chess.close()
