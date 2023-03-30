@@ -23,6 +23,65 @@ cd Simple-MADRL-Chess
 python3 -m pip install requirements.txt
 ```
 
+### 🏋️ Train
+
+you can either run default train.py file:
+
+```bash
+python3 train.py
+```
+
+or you can create your own file:
+
+```python
+import numpy as np
+from chess import Chess
+from agents import SingleAgentChess, DoubleAgentsChess
+from learnings.ppo import PPO
+
+if __name__ == "__main__":
+    chess = Chess(
+        window_size=512, 
+        max_steps=128, 
+        render_mode="rgb_array"
+        # in case if you want to save episodes make sure the value is "rgb_array"
+    )
+    chess.reset()
+    
+    buffer_size = 16 # Number of Episode to store
+    ppo = PPO(
+        chess,
+        epochs=100,
+        batch_size=256,
+        buffer_size=buffer_size,
+        hidden_layers=(2048,) * 4,
+    )
+    
+    print(ppo.device)
+    print(ppo)
+    print("-" * 64)
+
+    # also you can use `DoubleAgentChess` with the same parameters
+    agent = SingleAgentChess( 
+        env=chess,
+        learner=ppo,
+        episodes=40, # number of episodes to play/learn
+        train_on=buffer_size, # current episode % train on == 0 then train
+        result_folder="results",
+    )
+    agent.train(
+        render_each=10, # render and save the game into a episode_{n}.mp4 file
+        save_on_learn=True # save the stats after each learning
+    )
+    agent.save()
+    chess.close()
+
+```
+
+### 🎮 Play
+
+TODO
+
 ## 🤝 Contributing
 
 Contributions to this project are welcome. If you have any ideas or suggestions, feel free to open an issue or submit a pull request.
