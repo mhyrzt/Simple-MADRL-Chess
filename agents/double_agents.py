@@ -5,7 +5,7 @@ from buffer.episode import Episode
 from learnings.base import Learning
 
 
-class DoubleAgent(BaseAgent):
+class DoubleAgentsChess(BaseAgent):
     def __init__(
         self,
         env: Chess,
