@@ -74,7 +74,7 @@ class BaseAgent(ABC):
         renders = []
 
         def render_fn():
-            if render:
+            if self.env.render_mode != "human":
                 renders.append(self.env.render())
 
         self.env.reset()
@@ -101,7 +101,7 @@ class BaseAgent(ABC):
         self.rewards[Pieces.BLACK, self.current_ep] = episode_black.total_reward()
         self.rewards[Pieces.WHITE, self.current_ep] = episode_white.total_reward()
 
-        if render:
+        if (render or self.env.done) and self.env.render_mode != "human":
             path = f"results/renders/episode_{self.current_ep}.mp4"
             save_to_video(path, np.array(renders))
             print(f"*** EPISODE SAVED TO: {path} ***")
@@ -129,6 +129,7 @@ class BaseAgent(ABC):
 
     def save(self):
         folder = self.result_folder
+        np.save(os.path.join(folder, "moves.npy"), self.moves)
         np.save(os.path.join(folder, "rewards.npy"), self.rewards)
         np.save(os.path.join(folder, "mates_win.npy"), self.mates_win)
         np.save(os.path.join(folder, "mates_lose.npy"), self.mates_lose)
