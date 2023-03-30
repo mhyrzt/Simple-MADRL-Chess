@@ -16,7 +16,6 @@ class Learning(nn.Module, ABC):
         super().__init__()
         self.state_dim = environment.observation_space.shape[0]
         self.action_dim = environment.action_space.n
-        self.environment = environment
 
         self.gamma = gamma
         self.epochs = epochs
@@ -34,4 +33,8 @@ class Learning(nn.Module, ABC):
 
     @abstractmethod
     def remember(self, *args):
+        pass
+    
+    @abstractmethod
+    def save(self, folder: str):
         pass

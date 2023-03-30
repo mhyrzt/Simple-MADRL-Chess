@@ -1,3 +1,4 @@
+import os
 import gym
 import numpy as np
 import torch as T
@@ -104,3 +105,7 @@ class PPO(Learning):
 
     def remember(self, episode: Episode):
         self.buffer.add(episode)
+
+    def save(self, folder: str, name: str):
+        T.save(self, os.path.join(folder, f"{name}.pt"))
+        
