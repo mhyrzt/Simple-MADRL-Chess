@@ -1,4 +1,5 @@
 import gym
+import copy
 import pygame
 import numpy as np
 import chess.moves as Moves
@@ -12,7 +13,7 @@ from typing import Union
 from pygame.font import Font
 from pygame.surface import Surface
 
-from chess.types import Cell, Action, Trajectory
+from chess.types import Cell
 
 
 class Chess(gym.Env):
@@ -71,8 +72,8 @@ class Chess(gym.Env):
             "knight_2": (0, 6),
             "bishop_1": (0, 2),
             "bishop_2": (0, 5),
-            "king": (0, 4),
             "queen": (0, 3),
+            "king": (0, 4),
         }
 
         return [pieces.copy(), pieces.copy()]
@@ -207,56 +208,100 @@ class Chess(gym.Env):
 
         return True
 
+    def piece_can_jump(self, pos: Cell, turn: int) -> bool:
+        jumps = {Pieces.KNIGHT, Pieces.KING}
+        piece = self.board[turn, pos[0], pos[1]]
+        return piece in jumps
+
+    def general_validation(
+        self,
+        current_pos: Cell,
+        next_pos: Cell,
+        turn: int,
+        deny_enemy_king: bool,
+    ) -> bool:
+        if not self.is_in_range(next_pos):
+            return False
+
+        if not self.is_empty(next_pos, turn):
+            return False
+
+        if self.is_enemy_king(next_pos, turn) and (not deny_enemy_king):
+            return False
+
+        if (not self.piece_can_jump(current_pos, turn)) and (
+            not self.is_path_empty(current_pos, next_pos, turn)
+        ):
+            return False
+
+        return True
+
+    def is_valid_move(
+        self,
+        current_pos: Cell,
+        next_pos: Cell,
+        turn: int,
+        deny_enemy_king: bool,
+    ) -> bool:
+        if not self.general_validation(current_pos, next_pos, turn, deny_enemy_king):
+            return False
+        if self.is_lead_to_check(current_pos, next_pos, turn):
+            return False
+        return True
+
+    def is_lead_to_check(self, current_pos: int, next_pos: int, turn: int):
+        temp = Chess(render_mode="rgb_array")
+        temp.board = np.copy(self.board)
+        temp.move_piece(current_pos, next_pos, turn)
+        rk, ck = temp.get_pos_king(turn)
+        enemy_pieces = np.where(temp.board[1 - turn] != Pieces.EMPTY)
+        enemy_pieces = np.stack(enemy_pieces, axis=1)
+
+        for row, col in enemy_pieces:
+            piece = temp.board[1 - turn, row, col]
+            for r, c in Moves.PIECE_MOVE[piece]:
+                nc = c + col
+                nr = r + row
+                if not temp.general_validation((row, col), (nr, nc), 1 - turn, True):
+                    continue
+                if 7 - rk == nr and nc == ck:
+                    del temp
+                    return True
+        del temp
+        return False
+
     def get_actions_for_bishop(
         self, pos: Cell, turn: int, deny_enemy_king: bool = False
     ):
         possibles, actions_mask = self.get_empty_actions("bishop")
-        if self.checked[turn] or (pos is None):
+        if pos is None:
             return possibles, actions_mask
 
         row, col = pos
         for i, (r, c) in enumerate(Moves.BISHOP):
-            p = (row + r, col + c)
+            next_pos = (row + r, col + c)
 
-            if not self.is_in_range(p):
+            if not self.is_valid_move(pos, next_pos, turn, deny_enemy_king):
                 continue
 
-            if not self.is_empty(p, turn):
-                continue
-
-            if self.is_enemy_king(p, turn) and (not deny_enemy_king):
-                continue
-
-            if not self.is_path_empty(pos, p, turn):
-                continue
-
-            possibles[i] = p
+            possibles[i] = next_pos
             actions_mask[i] = 1
 
         return possibles, actions_mask
 
     def get_actions_for_rook(self, pos: Cell, turn: int, deny_enemy_king: bool = False):
         possibles, actions_mask = self.get_empty_actions("rook")
-        if self.checked[turn] or (pos is None):
+        if pos is None:
             return possibles, actions_mask
 
         row, col = pos
         for i, (r, c) in enumerate(Moves.ROOK):
-            p = (row + r, col + c)
+            next_pos = (row + r, col + c)
 
-            if not self.is_in_range(p):
+            if not self.is_valid_move(pos, next_pos, turn, deny_enemy_king):
                 continue
 
-            if not self.is_empty(p, turn):
-                continue
-
-            if self.is_enemy_king(p, turn) and (not deny_enemy_king):
-                continue
-
-            if not self.is_path_empty(pos, p, turn):
-                continue
-
-            possibles[i] = p
+            possibles[i] = next_pos
             actions_mask[i] = 1
 
         return possibles, actions_mask
@@ -275,38 +320,28 @@ class Chess(gym.Env):
 
     def get_actions_for_pawn(self, pos: Cell, turn: int, deny_enemy_king: bool = False):
         possibles, actions_mask = self.get_empty_actions("pawn")
-        if self.checked[turn] or (pos is None):
+        if pos is None:
             return possibles, actions_mask
+
         row, col = pos
         if self.board[turn, row, col] == Pieces.QUEEN:
             return self.get_action_for_queen(pos, turn)
 
         for i, (r, c) in enumerate(Moves.PAWN[:4]):
-            p = (row + r, col + c)
+            next_pos = (row + r, col + c)
 
-            if not self.is_in_range(p):
-                continue
-
-            if not self.is_empty(p, turn):
-                continue
-
-            if self.is_enemy_king(p, turn) and (not deny_enemy_king):
+            if not self.is_valid_move(pos, next_pos, turn, deny_enemy_king):
                 continue
 
             can_moves = (
-                (r == 1 and c == 0 and self.both_side_empty(p, turn)),
-                (
-                    r == 2
-                    and row == 1
-                    and self.both_side_empty(p, turn)
-                    and self.is_path_empty(pos, p, turn)
-                ),
-                (r == 1 and abs(c) == 1 and self.check_for_enemy(p, turn)),
+                (r == 1 and c == 0 and self.both_side_empty(next_pos, turn)),
+                (r == 2 and row == 1 and self.both_side_empty(next_pos, turn)),
+                (r == 1 and abs(c) == 1 and self.check_for_enemy(next_pos, turn)),
                 # TODO: EN PASSANT
             )
 
             if True in can_moves:
-                possibles[i] = p
+                possibles[i] = next_pos
                 actions_mask[i] = 1
 
         return possibles, actions_mask
@@ -316,46 +351,35 @@ class Chess(gym.Env):
     ):
         possibles, actions_mask = self.get_empty_actions("knight")
 
-        if self.checked[turn] or (pos is None):
+        if pos is None:
             return possibles, actions_mask
 
         row, col = pos
         for i, (r, c) in enumerate(Moves.KNIGHT):
-            p = (row + r, col + c)
-            if not self.is_in_range(p):
+            next_pos = (row + r, col + c)
+            if not self.is_valid_move(pos, next_pos, turn, deny_enemy_king):
                 continue
 
-            if not self.is_empty(p, turn):
-                continue
-
-            if self.is_enemy_king(p, turn) and (not deny_enemy_king):
-                continue
-
-            possibles[i] = p
+            possibles[i] = next_pos
             actions_mask[i] = 1
 
         return possibles, actions_mask
 
     def get_actions_for_king(self, pos: Cell, turn: int):
+        pos
         row, col = pos
         possibles, actions_mask = self.get_empty_actions("king")
 
         for i, (r, c) in enumerate(Moves.KING):
-            p = (row + r, col + c)
+            next_pos = (row + r, col + c)
 
-            if not self.is_in_range(p):
+            if not self.is_valid_move(pos, next_pos, turn, False):
                 continue
 
-            if not self.is_empty(p, turn):
+            if self.is_neighbor_enemy_king(next_pos, turn):
                 continue
 
-            if self.is_neighbor_enemy_king(p, turn):
-                continue
-
-            if self.is_check(p, turn):
-                continue
-
-            possibles[i] = p
+            possibles[i] = next_pos
             actions_mask[i] = 1
 
         return possibles, actions_mask
@@ -372,40 +396,41 @@ class Chess(gym.Env):
         assert name in self.pieces_names, f"name not in {self.pieces_names}"
         piece_cat = name.split("_")[0]
         piece_pos = self.pieces[turn][name]
+        src_poses = self.get_source_pos(name, turn)
 
         if piece_cat == "pawn":
             return (
-                self.get_source_pos(name, turn),
+                src_poses,
                 *self.get_actions_for_pawn(piece_pos, turn, deny_enemy_king),
             )
 
         if piece_cat == "knight":
             return (
-                self.get_source_pos(name, turn),
+                src_poses,
                 *self.get_actions_for_knight(piece_pos, turn, deny_enemy_king),
             )
 
         if piece_cat == "rook":
             return (
-                self.get_source_pos(name, turn),
+                src_poses,
                 *self.get_actions_for_rook(piece_pos, turn, deny_enemy_king),
             )
 
         if piece_cat == "bishop":
             return (
-                self.get_source_pos(name, turn),
+                src_poses,
                 *self.get_actions_for_bishop(piece_pos, turn, deny_enemy_king),
             )
 
         if piece_cat == "queen":
             return (
-                self.get_source_pos(name, turn),
+                src_poses,
                 *self.get_action_for_queen(piece_pos, turn, deny_enemy_king),
             )
 
         if piece_cat == "king":
             return (
-                self.get_source_pos(name, turn),
+                src_poses,
                 *self.get_actions_for_king(piece_pos, turn),
             )
 
@@ -460,7 +485,7 @@ class Chess(gym.Env):
 
     def is_check(self, king_pos: Cell, turn: int):
         row, col = king_pos
-        _, enemy_possible_moves, _ = self.get_all_actions(1 - turn, True)
+        enemy_possible_moves = self.get_all_actions(1 - turn, True)[1]
         for (r, c) in enemy_possible_moves:
             if r == 7 - row and c == col:
                 return True
@@ -506,9 +531,11 @@ class Chess(gym.Env):
         self.board[turn, next_row, next_col] = self.board[
             turn, current_row, current_col
         ]
+
         self.promote_pawn(next_pos, turn)
         self.board[turn, current_row, current_col] = Pieces.EMPTY
         self.board[1 - turn, 7 - next_row, next_col] = Pieces.EMPTY
+
         for (key, value) in self.pieces[turn].items():
             if value == tuple(current_pos):
                 self.pieces[turn][key] = tuple(next_pos)
