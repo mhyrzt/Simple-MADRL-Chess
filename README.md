@@ -33,6 +33,13 @@ Contributions to this project are welcome. If you have any ideas or suggestions,
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-## Citation 📃
+## References 📚
+
+- [Mastering Chess and Shogi by Self-Play with a General Reinforcement Learning Algorithm](https://arxiv.org/abs/1712.01815)
+- [Implementing action mask in proximal policy optimization (PPO) algorithm](https://www.sciencedirect.com/science/article/pii/S2405959520300746?via%3Dihub)
+- [Action Space Shaping in Deep Reinforcement Learning](https://arxiv.org/abs/2004.00980)
+- [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347)
+
+## Citation 🗣️
 
 COMING SOON...
