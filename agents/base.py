@@ -102,7 +102,7 @@ class BaseAgent(ABC):
         self.rewards[Pieces.WHITE, self.current_ep] = episode_white.total_reward()
 
         if (render or self.env.done) and self.env.render_mode != "human":
-            path = f"results/renders/episode_{self.current_ep}.mp4"
+            path = os.path.join(self.result_folder, "renders", "episode_{self.current_ep}.mp4")
             save_to_video(path, np.array(renders))
 
     def log(self, episode: int):
