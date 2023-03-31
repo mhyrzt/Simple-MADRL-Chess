@@ -12,7 +12,7 @@ The project will explore two different methods for applying the PPO algorithm to
 The second method will involve training a single agent with a single neural network. This agent will learn to play both sides of the chessboard, meaning it will learn to play as both white and black pieces. This approach is known as joint training and has the advantage of being more computationally efficient since it only requires one agent to be trained.
 
 <p align="center">
-    <img src="readme/example.gif" alt="example">
+    <img src="results/play.gif" alt="example">
 </p>
 
 ## 💾 Installation
@@ -77,9 +77,13 @@ if __name__ == "__main__":
 
 ```
 
-## 🎮 Play
+## 📊 Results
 
-TODO
+### Single Agent
+
+<p align="center">
+    <img src="results/plots.jpeg" alt="single agent">
+</p>
 
 ## 🤝 Contributing
 
@@ -91,10 +95,11 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## 📚 References
 
-- [Mastering Chess and Shogi by Self-Play with a General Reinforcement Learning Algorithm](https://arxiv.org/abs/1712.01815)
-- [Implementing action mask in proximal policy optimization (PPO) algorithm](https://www.sciencedirect.com/science/article/pii/S2405959520300746?via%3Dihub)
-- [Action Space Shaping in Deep Reinforcement Learning](https://arxiv.org/abs/2004.00980)
 - [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347)
+- [Action Space Shaping in Deep Reinforcement Learning](https://arxiv.org/abs/2004.00980)
+- [Implementing action mask in proximal policy optimization (PPO) algorithm](https://www.sciencedirect.com/science/article/pii/S2405959520300746?via%3Dihub)
+- [Reward is Enough](deepmind.com/publications/reward-is-enough)
+- [Mastering Chess and Shogi by Self-Play with a General Reinforcement Learning Algorithm](https://arxiv.org/abs/1712.01815)
 
 ## ⚠️ Warnings & Notes
 
