@@ -105,5 +105,4 @@ plot_ma(axs[1, 0], checks, episodes, count=32)
 plot_check_mates(axs[1, 1], mates, episodes, COUNT)
 
 fig.tight_layout()
-plt.show()
 fig.savefig("results/SingleAgent/plots.jpeg")
