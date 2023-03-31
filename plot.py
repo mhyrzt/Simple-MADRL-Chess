@@ -79,30 +79,34 @@ def plot_check_mates(ax, check_mates_arr: np.ndarray, episodes: int, count_densi
         linewidth=2
     )
     density_ax.legend()
+    density_ax.grid()
     plot(ax, check_mates_arr,"Check Mates", episodes, alpha=0.25, legend=False)
     
 ALPHA = 0.25
-COUNT = 16
+COUNT = 512
+for name in ["Double Agents", "Single Agent"]:
+    print(name,"...")
+    folder = "".join(name.split(" "))
+    folder = f"results/{folder}"
+    moves = np.load(f"{folder}/moves.npy")
+    mates = np.load(f"{folder}/mates_win.npy")
+    checks = np.load(f"{folder}/checks_win.npy")
+    rewards = np.load(f"{folder}/rewards.npy")
+    episodes = np.max(np.where(moves[0] != 0)) + 1
 
-moves = np.load("results/DoubleAgents/moves.npy")
-mates = np.load("results/DoubleAgents/mates_win.npy")
-checks = np.load("results/DoubleAgents/checks_win.npy")
-rewards = np.load("results/DoubleAgents/rewards.npy")
-episodes = np.max(np.where(moves[0] != 0)) + 1
+    fig, axs = plt.subplots(2, 2, figsize=(20, 12), dpi=200)
+    fig.suptitle(f"{name} | {episodes} Episodes")
 
-fig, axs = plt.subplots(2, 2, figsize=(20, 12), dpi=200)
-fig.suptitle(f"Single Agent | {episodes} Episodes")
+    plot(axs[0, 0], rewards, "Rewards", episodes, alpha=ALPHA)
+    plot_ma(axs[0, 0], rewards, episodes, count=32)
 
-plot(axs[0, 0], rewards, "Rewards", episodes, alpha=ALPHA)
-plot_ma(axs[0, 0], rewards, episodes, count=32)
+    plot_moves(axs[0, 1], moves, episodes, count=32)
 
-plot_moves(axs[0, 1], moves, episodes, count=32)
-
-plot(axs[1, 0], checks, "Checks", episodes, alpha=ALPHA)
-plot_ma(axs[1, 0], checks, episodes, count=32)
+    plot(axs[1, 0], checks, "Checks", episodes, alpha=ALPHA)
+    plot_ma(axs[1, 0], checks, episodes, count=32)
 
 
-plot_check_mates(axs[1, 1], mates, episodes, COUNT)
+    plot_check_mates(axs[1, 1], mates, episodes, COUNT)
 
-fig.tight_layout()
-fig.savefig("results/DoubleAgents/plots.jpeg")
+    fig.tight_layout()
+    fig.savefig(f"{folder}/plots.jpeg")
