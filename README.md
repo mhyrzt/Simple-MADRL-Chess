@@ -92,7 +92,11 @@ python3 plot.py
     <img src="results/SingleAgent/plots.jpeg" alt="single agent plots">
 </p>
 
-<!-- ### ⚔ Double Agents -->
+### ⚔ Double Agents
+
+<p align="center">
+    <img src="results/DoubleAgents/plots.jpeg" alt="single agent plots">
+</p>
 
 ## 🤝 Contributing
 

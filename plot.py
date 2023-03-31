@@ -82,12 +82,12 @@ def plot_check_mates(ax, check_mates_arr: np.ndarray, episodes: int, count_densi
     plot(ax, check_mates_arr,"Check Mates", episodes, alpha=0.25, legend=False)
     
 ALPHA = 0.25
-COUNT = 512
+COUNT = 16
 
-moves = np.load("results/SingleAgent/moves.npy")
-mates = np.load("results/SingleAgent/mates_win.npy")
-checks = np.load("results/SingleAgent/checks_win.npy")
-rewards = np.load("results/SingleAgent/rewards.npy")
+moves = np.load("results/DoubleAgents/moves.npy")
+mates = np.load("results/DoubleAgents/mates_win.npy")
+checks = np.load("results/DoubleAgents/checks_win.npy")
+rewards = np.load("results/DoubleAgents/rewards.npy")
 episodes = np.max(np.where(moves[0] != 0)) + 1
 
 fig, axs = plt.subplots(2, 2, figsize=(20, 12), dpi=200)
@@ -105,4 +105,4 @@ plot_ma(axs[1, 0], checks, episodes, count=32)
 plot_check_mates(axs[1, 1], mates, episodes, COUNT)
 
 fig.tight_layout()
-fig.savefig("results/SingleAgent/plots.jpeg")
+fig.savefig("results/DoubleAgents/plots.jpeg")

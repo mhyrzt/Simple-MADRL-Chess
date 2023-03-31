@@ -2,7 +2,7 @@ from chess import Chess
 from agents import SingleAgentChess, DoubleAgentsChess
 from learnings.ppo import PPO
 
-buffer_size = 16
+buffer_size = 32
 if __name__ == "__main__":
     chess = Chess(window_size=512, max_steps=128, render_mode="rgb_array")
     chess.reset()
@@ -19,12 +19,12 @@ if __name__ == "__main__":
     print(ppo)
     print("-" * 64)
 
-    agent = SingleAgentChess(
+    agent = DoubleAgentsChess(
         env=chess,
         learner=ppo,
         episodes=2000,
         train_on=buffer_size,
-        result_folder="results",
+        result_folder="results/DoubleAgents",
     )
     agent.train(render_each=20, save_on_learn=True)
     agent.save()
