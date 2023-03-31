@@ -249,26 +249,11 @@ class Chess(gym.Env):
             return False
         return True
 
-    def is_lead_to_check(self, current_pos: int, next_pos: int, turn: int):
+    def is_lead_to_check(self, current_pos: int, next_pos: int, turn: int) -> bool:
         temp = Chess(render_mode="rgb_array")
         temp.board = np.copy(self.board)
         temp.move_piece(current_pos, next_pos, turn)
-        rk, ck = temp.get_pos_king(turn)
-        enemy_pieces = np.where(temp.board[1 - turn] != Pieces.EMPTY)
-        enemy_pieces = np.stack(enemy_pieces, axis=1)
-
-        for row, col in enemy_pieces:
-            piece = temp.board[1 - turn, row, col]
-            for r, c in Moves.PIECE_MOVE[piece]:
-                nc = c + col
-                nr = r + row
-                if not temp.general_validation((row, col), (nr, nc), 1 - turn, True):
-                    continue
-                if 7 - rk == nr and nc == ck:
-                    del temp
-                    return True
-        del temp
-        return False
+        return temp.is_check(temp.get_pos_king(turn), turn)
 
     def get_actions_for_bishop(
         self, pos: Cell, turn: int, deny_enemy_king: bool = False
@@ -463,11 +448,11 @@ class Chess(gym.Env):
     def is_empty(self, pos: Cell, turn: int) -> bool:
         return self.board[turn, pos[0], pos[1]] == Pieces.EMPTY
 
-    def is_enemy_king(self, pos: Cell, turn: int):
+    def is_enemy_king(self, pos: Cell, turn: int) -> bool:
         r, c = pos
         return self.board[1 - turn, 7 - r, c] == Pieces.KING
 
-    def both_side_empty(self, pos: Cell, turn: int):
+    def both_side_empty(self, pos: Cell, turn: int) -> bool:
         r, c = pos
         return self.is_empty(pos, turn) and self.is_empty((7 - r, c), 1 - turn)
 
@@ -475,7 +460,7 @@ class Chess(gym.Env):
         row, col = np.where(self.board[turn] == Pieces.KING)
         return row[0], col[0]
 
-    def is_neighbor_enemy_king(self, pos: Cell, turn: int):
+    def is_neighbor_enemy_king(self, pos: Cell, turn: int) -> bool:
         row, col = pos
         row_enemy_king, col_enemy_king = self.get_pos_king(1 - turn)
         row_enemy_king = 7 - row_enemy_king
@@ -483,12 +468,79 @@ class Chess(gym.Env):
         diff_col = abs(col - col_enemy_king)
         return diff_row <= 1 and diff_col <= 1
 
-    def is_check(self, king_pos: Cell, turn: int):
-        row, col = king_pos
-        enemy_possible_moves = self.get_all_actions(1 - turn, True)[1]
-        for (r, c) in enemy_possible_moves:
-            if r == 7 - row and c == col:
+    def is_check(self, king_pos: Cell, turn: int) -> bool:
+        rk, ck = king_pos
+        # RIGHT ROW
+        for r in range(rk + 1, 8):
+            if not self.is_empty((r, ck), turn):
+                break
+            p = self.board[1 - turn, 7 - r, ck]
+            if p == Pieces.ROOK or p == Pieces.QUEEN:
                 return True
+        # LEFT ROW
+        for r in range(rk - 1, -1, -1):
+            if not self.is_empty((r, ck), turn):
+                break
+            p = self.board[1 - turn, 7 - r, ck]
+            if p == Pieces.ROOK or p == Pieces.QUEEN:
+                return True
+        # DOWN COL
+        for c in range(ck + 1, 8):
+            if not self.is_empty((rk, c), turn):
+                break
+            p = self.board[1 - turn, 7 - rk, c]
+            if p == Pieces.ROOK or p == Pieces.QUEEN:
+                return True
+
+        # UP COL
+        for c in range(ck - 1, -1, -1):
+            if not self.is_empty((rk, c), turn):
+                break
+            p = self.board[1 - turn, 7 - rk, c]
+            if p == Pieces.ROOK or p == Pieces.QUEEN:
+                return True
+
+        # CROSS DOWN
+        for r in range(rk + 1, 8):
+            # RIGHT
+            d = r - rk
+            for c in [c + d, c - d]:
+                if not self.is_in_range((r, c)):
+                    continue
+
+                if not self.is_empty((r, c), turn):
+                    break
+
+                p = self.board[1 - turn, 7 - r, c]
+                if p == Pieces.BISHOP or p == Pieces.QUEEN:
+                    return True
+                if r - rk == 1 and abs(c - ck) == 1 and p == Pieces.PAWN:
+                    return True
+
+        # CROSS UP
+        for r in range(rk - 1, -1, -1):
+            d = r - rk
+            for c in [c + d, c - d]:
+                if not self.is_in_range((r, c)):
+                    continue
+
+                if not self.is_empty((r, c), turn):
+                    break
+
+                p = self.board[1 - turn, 7 - r, c]
+                if p == Pieces.BISHOP or p == Pieces.QUEEN:
+                    return True
+                if r - rk == 1 and abs(c - ck) == 1 and p == Pieces.PAWN:
+                    return True
+
+        # KNIGHTS
+        for r, c in Moves.KNIGHT:
+            nr, nc = rk + r, ck + c
+            if not self.is_in_range((nr, nc)):
+                continue
+            if self.board[1 - turn, 7 - nr, nc] == Pieces.KNIGHT:
+                return True
+
         return False
 
     def update_checks(self, rewards: list[int] = None, infos: list[set] = None):
