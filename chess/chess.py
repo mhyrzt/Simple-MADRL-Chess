@@ -470,21 +470,24 @@ class Chess(gym.Env):
 
     def is_check(self, king_pos: Cell, turn: int) -> bool:
         rk, ck = king_pos
-        # RIGHT ROW
+        
+        # GO TO UP ROW
         for r in range(rk + 1, 8):
             if not self.is_empty((r, ck), turn):
                 break
             p = self.board[1 - turn, 7 - r, ck]
             if p == Pieces.ROOK or p == Pieces.QUEEN:
                 return True
-        # LEFT ROW
+        
+        # GO TO DOWN ROW
         for r in range(rk - 1, -1, -1):
             if not self.is_empty((r, ck), turn):
                 break
             p = self.board[1 - turn, 7 - r, ck]
             if p == Pieces.ROOK or p == Pieces.QUEEN:
                 return True
-        # DOWN COL
+        
+        # GO TO RIGHT COL
         for c in range(ck + 1, 8):
             if not self.is_empty((rk, c), turn):
                 break
@@ -492,7 +495,7 @@ class Chess(gym.Env):
             if p == Pieces.ROOK or p == Pieces.QUEEN:
                 return True
 
-        # UP COL
+        # GOT TO LEFT COL
         for c in range(ck - 1, -1, -1):
             if not self.is_empty((rk, c), turn):
                 break
@@ -504,7 +507,7 @@ class Chess(gym.Env):
         for r in range(rk + 1, 8):
             # RIGHT
             d = r - rk
-            for c in [c + d, c - d]:
+            for c in [ck + d, ck - d]:
                 if not self.is_in_range((r, c)):
                     continue
 
@@ -514,13 +517,14 @@ class Chess(gym.Env):
                 p = self.board[1 - turn, 7 - r, c]
                 if p == Pieces.BISHOP or p == Pieces.QUEEN:
                     return True
-                if r - rk == 1 and abs(c - ck) == 1 and p == Pieces.PAWN:
+                
+                if d == 1 and p == Pieces.PAWN:
                     return True
 
         # CROSS UP
         for r in range(rk - 1, -1, -1):
             d = r - rk
-            for c in [c + d, c - d]:
+            for c in [ck + d, ck - d]:
                 if not self.is_in_range((r, c)):
                     continue
 
@@ -530,8 +534,7 @@ class Chess(gym.Env):
                 p = self.board[1 - turn, 7 - r, c]
                 if p == Pieces.BISHOP or p == Pieces.QUEEN:
                     return True
-                if r - rk == 1 and abs(c - ck) == 1 and p == Pieces.PAWN:
-                    return True
+
 
         # KNIGHTS
         for r, c in Moves.KNIGHT:
