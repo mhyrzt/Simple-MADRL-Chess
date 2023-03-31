@@ -89,7 +89,7 @@ python3 plot.py
 ### 👨‍🦯 Single Agent
 
 <p align="center">
-    <img src="results/plots.jpeg" alt="single agent">
+    <img src="results/SingleAgent/plots.jpeg" alt="single agent plots">
 </p>
 
 <!-- ### ⚔ Double Agents -->
@@ -111,7 +111,6 @@ Contributions to this project are welcome. If you have any ideas or suggestions,
 - [Reward is Enough](deepmind.com/publications/reward-is-enough)
 - [Mastering Chess and Shogi by Self-Play with a General Reinforcement Learning Algorithm](https://arxiv.org/abs/1712.01815)
 
-  
 ## 🗣️ Citation
 
 ```tex
