@@ -4,6 +4,7 @@
 ![NumPy](https://img.shields.io/badge/numpy-%23013243.svg?style=for-the-badge&logo=numpy&logoColor=white)
 ![PyTorch](https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?style=for-the-badge&logo=PyTorch&logoColor=white)
 <img src="https://www.pygame.org/docs/_static/pygame_tiny.png" height="35">
+[![DOI](https://zenodo.org/badge/614358049.svg)](https://zenodo.org/badge/latestdoi/614358049)
 
 The goal of this project is to build an environment for the game of chess and apply the Proximal Policy Optimization (PPO) algorithm to solve it using different methods. The chess environment implemented in this project will not support the en passant and castling moves.
 
@@ -113,4 +114,16 @@ Contributions to this project are welcome. If you have any ideas or suggestions,
   
 ## 🗣️ Citation
 
-COMING SOON...
+```tex
+@misc{mahyar_riazati_2023_7789509,
+  author       = {Mahyar Riazati},
+  title        = {{Simple Multi Agent Deep Reinforcement Learning 
+                   Solution for Chess}},
+  month        = mar,
+  year         = 2023,
+  publisher    = {Zenodo},
+  version      = {1.0.0},
+  doi          = {10.5281/zenodo.7789509},
+  url          = {https://doi.org/10.5281/zenodo.7789509}
+}
+```
