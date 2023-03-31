@@ -104,7 +104,6 @@ class BaseAgent(ABC):
         if (render or self.env.done) and self.env.render_mode != "human":
             path = f"results/renders/episode_{self.current_ep}.mp4"
             save_to_video(path, np.array(renders))
-            print(f"*** EPISODE SAVED TO: {path} ***")
 
     def log(self, episode: int):
         print(
@@ -114,14 +113,23 @@ class BaseAgent(ABC):
             f"\t- Checks = {self.checks_win[:, episode]}",
             f"\t- Mates  = {self.mates_win[:, episode]}",
             "-" * 64,
-            sep="\n"
+            sep="\n",
         )
 
+    def tqdm_postfix(self, episode: int):
+        return {
+            "episode": episode,
+            "moves": self.moves[:, episode],
+            "rewards": self.rewards[:, episode],
+            "checks": self.checks_win[:, episode],
+            "mates": self.mates_win[:, episode]
+        }
+
     def train(self, render_each: int, save_on_learn: bool = True):
-        for ep in range(self.episodes):
+        for ep in (pbar := tqdm(range(self.episodes))):
             self.train_episode(ep % render_each == 0 or ep == self.episodes - 1)
             self.current_ep += 1
-            self.log(ep)
+            pbar.set_postfix(self.tqdm_postfix(ep))
             if (ep + 1) % self.train_on == 0:
                 self.learn()
                 if save_on_learn:
