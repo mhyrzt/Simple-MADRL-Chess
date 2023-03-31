@@ -85,11 +85,13 @@ After training your agent/agents, you can easily plot and view the results by ru
 python3 plot.py
 ```
 
-### Single Agent
+### 👨‍🦯 Single Agent
 
 <p align="center">
     <img src="results/plots.jpeg" alt="single agent">
 </p>
+
+<!-- ### ⚔ Double Agents -->
 
 ## 🤝 Contributing
 
