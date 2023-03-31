@@ -99,7 +99,7 @@ class PPO(Learning):
             self.critic_optimizer.step()
 
     def learn(self):
-        for epoch in tqdm(range(self.epochs), desc="PPO Learning...", ncols=64):
+        for epoch in tqdm(range(self.epochs), desc="PPO Learning...", ncols=64, leave=False):
             self.epoch()
         self.buffer.clear()
 
