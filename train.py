@@ -1,4 +1,3 @@
-import numpy as np
 from chess import Chess
 from agents import SingleAgentChess, DoubleAgentsChess
 from learnings.ppo import PPO
@@ -12,8 +11,8 @@ if __name__ == "__main__":
         chess,
         hidden_layers=(2048,) * 4,
         epochs=100,
-        buffer_size=buffer_size,
-        batch_size=256,
+        buffer_size=buffer_size * 2,
+        batch_size=128,
     )
 
     print(ppo.device)
@@ -23,13 +22,10 @@ if __name__ == "__main__":
     agent = SingleAgentChess(
         env=chess,
         learner=ppo,
-        episodes=40,
+        episodes=2000,
         train_on=buffer_size,
         result_folder="results",
     )
-    agent.train(
-        render_each=10, 
-        save_on_learn=True
-    )
+    agent.train(render_each=20, save_on_learn=True)
     agent.save()
     chess.close()
