@@ -79,6 +79,12 @@ if __name__ == "__main__":
 
 ## 📊 Results
 
+After training your agent/agents, you can easily plot and view the results by running the following command:
+
+```bash
+python3 plot.py
+```
+
 ### Single Agent
 
 <p align="center">
