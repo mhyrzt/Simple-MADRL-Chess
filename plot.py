@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
+
 A = 0.25
 B = "tab:blue"
 W = "tab:orange"
@@ -62,7 +64,7 @@ def density(arr, count, episode):
     zs = []
     for i in range(0, episode):
         j = max(0, i - count)
-        z = np.sum(a[j: i])
+        z = np.sum(a[j: i]) / count
         zs.append(z)
     return zs
 
@@ -75,15 +77,16 @@ def plot_check_mates(ax, check_mates_arr: np.ndarray, episodes: int, count_densi
         density_arr, 
         color="tab:green", 
         alpha=1, 
-        label=f"Total check mates for {count_density} episodes",
+        label=f"total check mates rate for {count_density} episodes",
         linewidth=2
     )
+    density_ax.yaxis.set_major_locator(MaxNLocator(integer=True))
     density_ax.legend()
     density_ax.grid()
     plot(ax, check_mates_arr,"Check Mates", episodes, alpha=0.25, legend=False)
     
 ALPHA = 0.25
-COUNT = 512
+COUNT = 100 # 512
 for name in ["Double Agents", "Single Agent"]:
     print(name,"...")
     folder = "".join(name.split(" "))

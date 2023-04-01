@@ -12,7 +12,7 @@ The project will explore two different methods for applying the PPO algorithm to
 
 The second method will involve training a single agent with a single neural network. This agent will learn to play both sides of the chessboard, meaning it will learn to play as both white and black pieces. This approach is known as joint training and has the advantage of being more computationally efficient since it only requires one agent to be trained.
 
-| Initial Agent                             | Single Agent Episode 1825                | Double Agents Episode 493                 |
+| Initial Agent                             | Single Agent                             | Double Agents                             |
 | ----------------------------------------- | ---------------------------------------- | ----------------------------------------- |
 | ![single_agent](results/play_initial.gif) | ![single_agent](results/play_single.gif) | ![double agents](results/play_double.gif) |
 
